@@ -135,6 +135,29 @@ SET @c := (
 SET @s := IF(@c = 0, 'ALTER TABLE brands ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1', 'SELECT "brands_active_exists"');
 PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
+-- Ensure `active` column exists on models (for existing DBs)
+SET @c := (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'models' AND COLUMN_NAME = 'active'
+);
+SET @s := IF(@c = 0, 'ALTER TABLE models ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1', 'SELECT "models_active_exists"');
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- Deduplicate models: keep lowest id per (brand_id, name) and add unique index
+DELETE m1 FROM models m1
+INNER JOIN models m2
+    ON m1.brand_id = m2.brand_id
+    AND m1.name = m2.name
+    AND m1.id > m2.id;
+
+-- Create unique index to prevent duplicates in future
+SET @exists := (
+        SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'models' AND INDEX_NAME = 'uq_models_brand_name'
+);
+SET @sql := IF(@exists = 0, 'ALTER TABLE models ADD UNIQUE INDEX uq_models_brand_name (brand_id, name)', 'SELECT "uq_models_brand_name_exists"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 -- Create index idx_customers_phone if not exists
 SET @exists := (
     SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS
@@ -169,4 +192,38 @@ CREATE TABLE IF NOT EXISTS suppliers (
     active TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Migration: Create categories (rubros) and link items to categories
+-- Safe to run multiple times
+
+CREATE TABLE IF NOT EXISTS categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add category_id column to items if missing
+SET @c := (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'category_id'
+);
+SET @s := IF(@c = 0, 'ALTER TABLE items ADD COLUMN category_id INT DEFAULT NULL', 'SELECT "items_category_exists"');
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+
+-- Add index on category_id if missing
+SET @exists := (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND INDEX_NAME = 'idx_items_category'
+);
+SET @sql := IF(@exists = 0, 'CREATE INDEX idx_items_category ON items (category_id)', 'SELECT "idx_items_category_exists"');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- Add foreign key constraint if missing
+SET @fk := (
+    SELECT COUNT(1) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'category_id' AND REFERENCED_TABLE_NAME = 'categories'
+);
+SET @sql := IF(@fk = 0, 'ALTER TABLE items ADD CONSTRAINT fk_items_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL', 'SELECT "fk_items_category_exists"');
+PREPARE stmt2 FROM @sql; EXECUTE stmt2; DEALLOCATE PREPARE stmt2;
 
