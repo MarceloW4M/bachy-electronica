@@ -422,7 +422,7 @@
         const payload = { repair_id: window.currentReportRepairId, labour_amount: Number(document.getElementById('reportLabour').value||0), labour_notes: (document.getElementById('reportLabourNotes').value||'').trim(), items: [] };
         reportSelected.forEach(it=>{ payload.items.push({ item_id: it.id, item_name: it.name, qty: it.qty, unit_price: it.unit_price }); });
         const res = await axios.post('/api/repair_reports.php', payload, { headers: getAuthHeaders() });
-        if(res && res.data && res.data.report_id){ showToast('Informe guardado','success'); document.getElementById('reportPrint').click(); reportModal.hide(); await loadRepairs(); }
+        if(res && res.data && res.data.report_id){ showToast('Informe guardado','success'); reportModal.hide(); await loadRepairs(); }
         else { showToast('No se pudo guardar informe','danger'); }
       }catch(e){ console.error(e); showToast('Error guardando informe','danger'); }
     });
