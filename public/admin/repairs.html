@@ -31,7 +31,7 @@
                   <div id="filterCustomerSuggestions" class="list-group position-absolute" style="z-index:1200; display:none; max-height:200px; overflow:auto;"></div>
                 </div>
                 <div class="col-auto" style="min-width:180px;"><label class="form-label">Nº Orden</label><input id="filterOrderNumber" class="form-control" placeholder="ORD-000001 o parte..." /></div>
-                <div class="col-auto" style="min-width:160px;"><label class="form-label">Estado</label><select id="filterStatus" class="form-select"><option value="">(Todos - por defecto oculta Completadas)</option><option value="all">Todos (incluye Completadas)</option><option value="received">Recibida</option><option value="en reparacion">En reparación</option><option value="pending">Pendiente</option><option value="done">Completada</option></select></div>
+                <div class="col-auto" style="min-width:160px;"><label class="form-label">Estado</label><select id="filterStatus" class="form-select"><option value="">(Todos - por defecto oculta Completadas)</option><option value="all">Todos (incluye Completadas)</option><option value="received">Recibida</option><option value="en reparacion">En reparación</option><option value="pending">Pendiente</option><option value="completada">Completada</option></select></div>
                 <div class="col-auto"><button id="btnFilter" class="btn btn-outline-primary">Filtrar</button> <button id="btnClearFilter" class="btn btn-light">Limpiar</button></div>
               </div>
             </div>
@@ -100,7 +100,7 @@
               <label class="form-label">Técnico</label>
               <select id="repairTechSelect" class="form-select"><option value="">Seleccionar técnico...</option></select>
             </div>
-            <div class="mb-3"><label class="form-label">Estado</label><select id="repairStatus" class="form-select"><option value="en reparacion">En reparación</option><option value="received">Recibida</option><option value="pending">Pendiente</option><option value="done">Completada</option></select></div>
+            <div class="mb-3"><label class="form-label">Estado</label><select id="repairStatus" class="form-select"><option value="en reparacion">En reparación</option><option value="received">Recibida</option><option value="pending">Pendiente</option><option value="completada">Completada</option></select></div>
             <div class="mb-3"><label class="form-label">Detalle del problema</label><textarea id="repairProblem" class="form-control" rows="3"></textarea></div>
             <div class="mb-3"><label class="form-label">Contacto adicional - Nombre completo</label><input id="repairContactName" class="form-control" placeholder="Nombre completo del contacto" /></div>
             <div class="mb-3"><label class="form-label">Contacto adicional - Teléfono</label><input id="repairContactPhone" class="form-control" placeholder="Número de teléfono" /></div>
