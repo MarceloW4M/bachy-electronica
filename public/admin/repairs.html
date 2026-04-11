@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Repairs</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+  <body class="bg-light">
+    <div id="adminNavbar"></div>
+    <script src="/admin/navbar.js"></script>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h4">Reparaciones</h1>
+            <div>
+              <button id="btnNew" type="button" class="btn btn-primary">Nueva orden de reparación</button>
+            </div>
+          </div>
+
+            <!-- Filters -->
+            <div class="mb-3">
+              <div class="row g-2 align-items-end">
+                <div class="col-auto" style="min-width:240px;">
+                  <label class="form-label">Cliente</label>
+                  <input id="filterCustomerSearch" class="form-control" placeholder="Buscar cliente..." autocomplete="off" />
+                  <input id="filterCustomerId" type="hidden" />
+                  <div id="filterCustomerSuggestions" class="list-group position-absolute" style="z-index:1200; display:none; max-height:200px; overflow:auto;"></div>
+                </div>
+                <div class="col-auto" style="min-width:180px;"><label class="form-label">Nº Orden</label><input id="filterOrderNumber" class="form-control" placeholder="ORD-000001 o parte..." /></div>
+                <div class="col-auto" style="min-width:160px;"><label class="form-label">Estado</label><select id="filterStatus" class="form-select"><option value="">(Todos - por defecto oculta Completadas)</option><option value="all">Todos (incluye Completadas)</option><option value="received">Recibida</option><option value="en reparacion">En reparación</option><option value="pending">Pendiente</option><option value="done">Completada</option></select></div>
+                <div class="col-auto"><button id="btnFilter" class="btn btn-outline-primary">Filtrar</button> <button id="btnClearFilter" class="btn btn-light">Limpiar</button></div>
+              </div>
+            </div>
+
+          <div class="card">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" id="repairsTable">
+                  <thead class="table-light"><tr><th>ID</th><th>Nombre</th><th>Dispositivo</th><th>Técnico</th><th>Fecha</th><th class="text-end">Acciones</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+              <!-- Add Repuesto Modal -->
+              <div class="modal fade" id="addRepuestoModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Seleccionar Repuesto</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="mb-2"><input id="addRepuestoSearch" class="form-control" placeholder="Buscar repuesto..." /></div>
+                      <div id="addRepuestoList" style="max-height:400px; overflow:auto;"></div>
+                    </div>
+                    <div class="modal-footer">
+                      <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+        </div>
+      </div>
+
+      <!-- Toasts -->
+      <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+        <div id="toastContainer"></div>
+      </div>
+    </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="repairModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Reparación <small id="repairOrderNumber" class="text-muted ms-2"></small></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="repairForm">
+            <input type="hidden" id="repairId">
+            <!-- Título eliminado: no es necesario -->
+            <div class="mb-3 position-relative">
+              <label class="form-label">Cliente</label>
+              <input id="repairCustomerSearch" class="form-control" placeholder="Buscar por nombre o teléfono" autocomplete="off" />
+              <input id="repairCustomerId" type="hidden" />
+              <div id="repairCustomerSuggestions" class="list-group position-absolute w-100" style="z-index:1200; display:none; max-height:200px; overflow:auto;"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Dispositivo</label>
+              <select id="repairDeviceSelect" class="form-select" disabled><option value="">Seleccionar dispositivo...</option></select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Técnico</label>
+              <select id="repairTechSelect" class="form-select"><option value="">Seleccionar técnico...</option></select>
+            </div>
+            <div class="mb-3"><label class="form-label">Estado</label><select id="repairStatus" class="form-select"><option value="en reparacion">En reparación</option><option value="received">Recibida</option><option value="pending">Pendiente</option><option value="done">Completada</option></select></div>
+            <div class="mb-3"><label class="form-label">Detalle del problema</label><textarea id="repairProblem" class="form-control" rows="3"></textarea></div>
+            <div class="mb-3"><label class="form-label">Contacto adicional - Nombre completo</label><input id="repairContactName" class="form-control" placeholder="Nombre completo del contacto" /></div>
+            <div class="mb-3"><label class="form-label">Contacto adicional - Teléfono</label><input id="repairContactPhone" class="form-control" placeholder="Número de teléfono" /></div>
+            <div class="mb-3"><label class="form-label">Fecha de reparación (para agendar)</label><input id="repairDate" class="form-control" type="datetime-local"></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button id="saveRepair" class="btn btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Informe Modal -->
+  <div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header d-flex justify-content-between align-items-center">
+          <div><h5 class="modal-title mb-0">Orden de Reparación</h5></div>
+          <div class="ms-auto text-end me-2"><strong id="reportOrderNumber"></strong></div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="reportDetails" class="mb-3"></div>
+
+          <div class="border rounded p-3 mb-3 bg-light-subtle">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Repuestos</h6>
+              <button id="btnAddRepuesto" class="btn btn-sm btn-outline-primary">Agregar repuesto</button>
+            </div>
+            <div id="reportItemsList" style="display:none;"></div>
+            <div id="reportSelected" class="mb-0"></div>
+          </div>
+
+          <div class="border rounded p-3 mb-3">
+            <h6 class="mb-3">Mano de Obra</h6>
+            <div class="mb-3"><textarea id="reportLabourNotes" class="form-control" rows="3" placeholder="Detalle del trabajo realizado"></textarea></div>
+              <div class="row g-2 align-items-center mb-3">
+                <div class="col-auto">
+                  <label class="form-label mb-0">Precio en Pesos</label>
+                </div>
+                <div class="col-6">
+                  <input id="reportLabour" type="number" class="form-control" step="0.01" placeholder="0.00" />
+                </div>
+              </div>
+          </div>
+
+          <div class="border rounded p-3">
+            <div class="mb-2"><strong>Subtotal repuestos:</strong> <span id="reportSubtotal">0</span> ARS</div>
+            <div class="mb-0 fs-5"><strong>Total:</strong> <span id="reportTotal">0</span> ARS</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          <button id="reportSave" class="btn btn-success">Guardar informe</button>
+          <button id="reportPrint" class="btn btn-primary">Imprimir informe</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/admin-utils.js"></script>
+  <script src="/js/admin-nav-active.js"></script>
+  <script>
+    // logout handler
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const lo = document.getElementById('logout');
+      if(lo) lo.addEventListener('click', async ()=>{ localStorage.removeItem('token'); await fetch('/auth.php/logout', { method: 'POST' }); window.location.href = '/admin/login.html'; });
+    });
+
+    // (no-op) header actions are handled in markup; no fallback needed
+
+    const modalEl = document.getElementById('repairModal');
+    const repairModal = new bootstrap.Modal(modalEl);
+
+    // Load repairs with optional filters: { customer_id, q (order number), status }
+    async function loadRepairs(filters = {}){
+      try{
+        const params = {};
+        if(filters.customer_id) params.customer_id = filters.customer_id;
+        if(filters.q) params.q = filters.q;
+        if(typeof filters.status !== 'undefined' && filters.status !== '') params.status = filters.status;
+
+        const res = await axios.get('/api/repairs.php', { headers: getAuthHeaders(), params });
+        const tbody = document.querySelector('#repairsTable tbody');
+        tbody.innerHTML = '';
+        (res.data || []).forEach(r => {
+          const include = (typeof r.active === 'undefined') || (r.active==1);
+          if(!include) return;
+          const tr = document.createElement('tr');
+          const nameLabel = escapeHtml(r.customer_name || r.customer || '');
+          const deviceLabel = escapeHtml(r.device_model || r.device || '');
+          const techLabel = escapeHtml(r.technician_name || r.tech_name || r.technician || '');
+          const dateLabel = escapeHtml(r.scheduled_at || r.created_at || r.date || '');
+          // order number and order date displayed in device column, single line; date shown as D/M/YYYY
+          const ordNum = r.order_number ? escapeHtml(r.order_number) : '';
+          let ordDate = '';
+          if(r.order_date){ try{ const d = new Date(r.order_date.replace(' ', 'T')); const dd = String(d.getDate()).padStart(2,'0'); const mm = String(d.getMonth()+1).padStart(2,'0'); ordDate = dd + '/' + mm + '/' + d.getFullYear(); }catch(e){ ordDate = ''; } }
+          const nameCell = `${nameLabel}`;
+          const deviceCell = `${deviceLabel}${(ordNum||ordDate) ? '<div class="small text-muted mt-1">' + (ordNum ? ordNum : '') + (ordNum && ordDate ? '  -  ' : '') + (ordDate ? ordDate : '') + '</div>' : ''}`;
+          tr.innerHTML = `<td>${r.id}</td><td>${nameCell}</td><td>${deviceCell}</td><td>${techLabel}</td><td>${dateLabel}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><button class="btn btn-sm btn-primary btn-action" data-id="${r.id}">Editar</button><button class="btn btn-sm btn-secondary btn-action" data-report="${r.id}">Informe</button><button class="btn btn-sm btn-danger btn-action" data-del="${r.id}">Borrar</button></div></td>`;
+          tbody.appendChild(tr);
+        });
+      }catch(err){ showToast('Error cargando reparaciones','danger'); }
+    }
+
+    // load technicians into select
+    async function loadTechnicians(){
+      try{
+        const res = await axios.get('/api/technicians.php?active=1', { headers: getAuthHeaders() });
+        const sel = document.getElementById('repairTechSelect');
+        if(!sel) return;
+        sel.innerHTML = '<option value="">Seleccionar técnico...</option>';
+        (res.data || []).forEach(t => { const opt = document.createElement('option'); opt.value = t.id; opt.text = t.name + (t.phone?(' — '+t.phone):''); sel.appendChild(opt); });
+      }catch(e){ /* ignore */ }
+    }
+
+    // Customer autocomplete for repairs
+    let rCustTimer = null;
+    const rCustInput = document.getElementById('repairCustomerSearch');
+    const rSuggBox = document.getElementById('repairCustomerSuggestions');
+    function hideRepairCustomerSuggestions(){ rSuggBox.style.display='none'; rSuggBox.innerHTML=''; }
+    function showRepairCustomerSuggestions(items){
+      rSuggBox.innerHTML=''; if(!items||items.length===0){ hideRepairCustomerSuggestions(); return; }
+      items.forEach(it=>{ const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action'; a.textContent = it.name + (it.phone?(' — '+it.phone):''); a.dataset.id = it.id; a.addEventListener('click', async (ev)=>{ ev.preventDefault(); document.getElementById('repairCustomerId').value = it.id; document.getElementById('repairCustomerSearch').value = a.textContent; hideRepairCustomerSuggestions(); // load devices for this customer
+          try{ const devRes = await axios.get('/api/devices.php?customer_id='+it.id, { headers: getAuthHeaders() }); const dsel=document.getElementById('repairDeviceSelect'); dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; (devRes.data||[]).forEach(d=>{ const opt=document.createElement('option'); opt.value=d.id; opt.text=(d.brand||'')+' '+(d.model||'')+(d.serial?(' — '+d.serial):''); dsel.appendChild(opt); }); dsel.disabled = false; }catch(e){}
+          // fetch full customer details to prefill contact fields
+          try{ const c = (await axios.get('/api/customers.php?id='+it.id, { headers: getAuthHeaders() })).data || {}; document.getElementById('repairContactName').value = c.contact_name || ''; document.getElementById('repairContactPhone').value = c.contact_phone || c.phone || ''; }catch(e){}
+        }); rSuggBox.appendChild(a); }); rSuggBox.style.display='block'; }
+    if(rCustInput){
+      rCustInput.addEventListener('input',(e)=>{ const v=e.target.value.trim(); document.getElementById('repairCustomerId').value=''; // reset device select when customer input changes
+        try{ const dsel = document.getElementById('repairDeviceSelect'); if(dsel){ dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; dsel.disabled = true; } }catch(err){}
+        if(rCustTimer) clearTimeout(rCustTimer); if(!v){ hideRepairCustomerSuggestions(); return; } rCustTimer = setTimeout(async ()=>{ try{ const res = await axios.get('/api/customers.php?q='+encodeURIComponent(v), { headers: getAuthHeaders() }); showRepairCustomerSuggestions(res.data||[]); }catch(err){ hideRepairCustomerSuggestions(); } }, 300); });
+      document.addEventListener('click',(ev)=>{ if(!rCustInput.contains(ev.target) && !rSuggBox.contains(ev.target)) hideRepairCustomerSuggestions(); });
+    }
+
+    // Ensure device select always reflects the currently selected customer when opened
+    const repairDeviceSelect = document.getElementById('repairDeviceSelect');
+    if(repairDeviceSelect){
+      repairDeviceSelect.addEventListener('focus', async ()=>{
+        try{
+          const cid = document.getElementById('repairCustomerId').value || null;
+          if(!cid) { repairDeviceSelect.disabled = true; return; }
+          // load devices for this customer
+          const devRes = await axios.get('/api/devices.php?customer_id=' + cid, { headers: getAuthHeaders() });
+          repairDeviceSelect.innerHTML = '<option value="">Seleccionar dispositivo...</option>';
+          (devRes.data||[]).forEach(d=>{ const opt = document.createElement('option'); opt.value = d.id; opt.text = (d.brand||'') + ' ' + (d.model||'') + (d.serial?(' — '+d.serial):''); repairDeviceSelect.appendChild(opt); });
+          repairDeviceSelect.disabled = false;
+        }catch(e){ repairDeviceSelect.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; repairDeviceSelect.disabled = true; }
+      });
+    }
+
+    // initial loads
+    loadTechnicians();
+
+    // Filters: customer autocomplete (shared pattern)
+    let fCustTimer = null;
+    const fCustInput = document.getElementById('filterCustomerSearch');
+    const fCustBox = document.getElementById('filterCustomerSuggestions');
+    function hideFilterCustomerSuggestions(){ fCustBox.style.display='none'; fCustBox.innerHTML=''; }
+    function showFilterCustomerSuggestions(items){ fCustBox.innerHTML=''; if(!items||items.length===0){ hideFilterCustomerSuggestions(); return; } items.forEach(it=>{ const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action'; a.textContent = it.name + (it.phone?(' — '+it.phone):''); a.dataset.id = it.id; a.addEventListener('click', (ev)=>{ ev.preventDefault(); document.getElementById('filterCustomerId').value = it.id; document.getElementById('filterCustomerSearch').value = a.textContent; hideFilterCustomerSuggestions(); }); fCustBox.appendChild(a); }); fCustBox.style.display='block'; }
+    if(fCustInput){
+      fCustInput.addEventListener('input',(e)=>{ const v=e.target.value.trim(); document.getElementById('filterCustomerId').value=''; if(fCustTimer) clearTimeout(fCustTimer); if(!v){ hideFilterCustomerSuggestions(); return; } fCustTimer = setTimeout(async ()=>{ try{ const res = await axios.get('/api/customers.php?q='+encodeURIComponent(v), { headers: getAuthHeaders() }); showFilterCustomerSuggestions(res.data||[]); }catch(err){ hideFilterCustomerSuggestions(); } }, 300); });
+      document.addEventListener('click',(ev)=>{ if(!fCustInput.contains(ev.target) && !fCustBox.contains(ev.target)) hideFilterCustomerSuggestions(); });
+    }
+
+    document.getElementById('btnFilter').addEventListener('click', ()=>{
+      const cid = document.getElementById('filterCustomerId').value || null;
+      const ord = document.getElementById('filterOrderNumber').value.trim() || null;
+      const status = document.getElementById('filterStatus').value;
+      const filters = {};
+      if(cid) filters.customer_id = cid;
+      if(ord) filters.q = ord;
+      if(status && status !== '') filters.status = status;
+      loadRepairs(filters);
+    });
+    document.getElementById('btnClearFilter').addEventListener('click', ()=>{
+      document.getElementById('filterCustomerId').value=''; document.getElementById('filterCustomerSearch').value=''; document.getElementById('filterOrderNumber').value=''; document.getElementById('filterStatus').value=''; hideFilterCustomerSuggestions(); loadRepairs();
+    });
+
+    // Report modal logic
+    const reportModalEl = document.getElementById('reportModal');
+    const reportModal = new bootstrap.Modal(reportModalEl);
+    let reportItemsCache = null; // items list
+    let reportSelected = [];
+
+    function fmtMoney(v){ return Number(v).toFixed(2); }
+
+    async function openReport(repairId){
+      try{
+        const res = await axios.get('/api/repairs.php?id='+repairId, { headers: getAuthHeaders() });
+        const r = res.data || {};
+        document.getElementById('reportOrderNumber').textContent = r.order_number || ('ID-'+r.id);
+        // fill details (read-only)
+        const cliente = escapeHtml(r.customer_name||'');
+        const telefono = escapeHtml(r.customer_contact_phone || r.phone || '');
+        const dispositivo = escapeHtml(r.device_model||'');
+        const serial = escapeHtml(r.device_serial || r.serial || '');
+        const email = escapeHtml(r.customer_email || r.email || '');
+        const problema = escapeHtml(r.problem||'');
+        const details = `
+          <div class="row mb-2">
+            <div class="col-7"><strong>Cliente:</strong> ${cliente}</div>
+            <div class="col-5"><strong>Teléfono:</strong> ${telefono}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-7"><strong>Dispositivo:</strong> ${dispositivo}</div>
+            <div class="col-5"><strong>Número de Serie:</strong> ${serial}</div>
+          </div>
+          <div class="mb-2"><strong>Correo electrónico:</strong> ${email}</div>
+          <div class="mb-2"><strong>Problema:</strong><div class="small text-muted">${problema}</div></div>
+        `;
+        document.getElementById('reportDetails').innerHTML = details;
+        // load items into cache for the add-repuesto modal only (do not show suggestions here)
+        if(!reportItemsCache){ const itemsRes = await axios.get('/api/items.php?active=1', { headers: getAuthHeaders() }); reportItemsCache = (itemsRes.data||[]).filter(it => (it.category_name||'').toLowerCase().indexOf('repuestos')!==-1); }
+        // keep suggestions hidden in the main modal; selected items appear on the right
+        const itemsList = document.getElementById('reportItemsList'); if(itemsList) itemsList.innerHTML = ''; 
+        // reset selection
+        reportSelected = [];
+        // store repair id for saving
+        window.currentReportRepairId = r.id || repairId;
+        renderReportSelected();
+        reportModal.show();
+      }catch(e){ showToast('No se pudo abrir informe','danger'); }
+    }
+
+    function renderReportSelected(){
+      const cont = document.getElementById('reportSelected'); cont.innerHTML='';
+      if(reportSelected.length){
+        const header = document.createElement('div');
+        header.className = 'd-flex gap-2 align-items-center border-bottom pb-2 mb-2 small text-muted';
+        header.innerHTML = '<div style="flex:1">Repuesto</div><div style="width:90px" class="text-center">Cant.</div><div style="width:120px" class="text-end">Precio</div><div style="width:120px" class="text-end">Subtotal</div><div style="width:88px"></div>';
+        cont.appendChild(header);
+      }
+      reportSelected.forEach((it,idx)=>{
+        const row = document.createElement('div'); row.className='d-flex gap-2 align-items-center mb-2';
+        row.innerHTML = `<div style="flex:1"><strong>${escapeHtml(it.name)}</strong><div class="small text-muted">${escapeHtml(it.brand_name||'')}</div></div><div style="width:90px"><input type="number" min="1" step="1" class="form-control form-control-sm qty-input" data-idx="${idx}" value="${it.qty}" /></div><div style="width:120px" class="text-end">${fmtMoney(it.unit_price)} ARS</div><div style="width:120px" class="text-end">${fmtMoney(it.qty * it.unit_price)} ARS</div><div><button class="btn btn-sm btn-outline-danger btn-remove" data-idx="${idx}">Quitar</button></div>`;
+        cont.appendChild(row);
+      });
+      if(!reportSelected.length){
+        const empty = document.createElement('div');
+        empty.className = 'text-muted small';
+        empty.textContent = 'Todavía no agregaste repuestos.';
+        cont.appendChild(empty);
+      }
+      updateReportTotals();
+    }
+
+    function updateReportTotals(){
+      let subtotal = 0;
+      reportSelected.forEach(it=>{ subtotal += (it.qty * Number(it.unit_price||0)); });
+      const labour = Number(document.getElementById('reportLabour').value||0);
+      const total = subtotal + labour;
+      document.getElementById('reportSubtotal').textContent = fmtMoney(subtotal);
+      document.getElementById('reportTotal').textContent = fmtMoney(total);
+    }
+
+    // Delegated events for report remove/qty
+    document.body.addEventListener('click', async (ev)=>{
+      const t = ev.target;
+      if(t && t.classList && t.classList.contains('btn-remove')){ const idx = Number(t.dataset.idx); reportSelected.splice(idx,1); renderReportSelected(); }
+    });
+
+    // Open Add Repuesto modal and populate list
+    const addRepuestoModalEl = document.getElementById('addRepuestoModal');
+    if(addRepuestoModalEl && addRepuestoModalEl.parentElement !== document.body){
+      document.body.appendChild(addRepuestoModalEl);
+    }
+    addRepuestoModalEl.addEventListener('show.bs.modal', ()=>{
+      addRepuestoModalEl.style.zIndex = '1080';
+      setTimeout(()=>{
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        const lastBackdrop = backdrops[backdrops.length - 1];
+        if(lastBackdrop) lastBackdrop.style.zIndex = '1075';
+      }, 0);
+    });
+    const addRepuestoModal = new bootstrap.Modal(addRepuestoModalEl);
+    document.getElementById('btnAddRepuesto').addEventListener('click', ()=>{
+      // populate full list
+      const list = document.getElementById('addRepuestoList'); list.innerHTML = '';
+      (reportItemsCache||[]).forEach(it=>{
+        const row = document.createElement('div'); row.className='d-flex justify-content-between align-items-center border-bottom py-2';
+        row.innerHTML = `<div><strong>${escapeHtml(it.name)}</strong><div class="small text-muted">${escapeHtml(it.brand_name||'')}</div></div><div class="text-end"><div>${fmtMoney(it.unit_price)} ARS</div><div><button class="btn btn-sm btn-primary ms-2" data-add-item="${it.id}">Agregar</button></div></div>`;
+        list.appendChild(row);
+      });
+      addRepuestoModal.show();
+    });
+
+    // delegated add from modal
+    document.getElementById('addRepuestoList').addEventListener('click', (ev)=>{
+      const t = ev.target;
+      if(t && t.dataset && t.dataset.addItem){ const id = t.dataset.addItem; const it = reportItemsCache.find(x=>String(x.id)===String(id)); if(it){ reportSelected.push({ id: it.id, name: it.name, brand_name: it.brand_name, unit_price: Number(it.unit_price||0), qty: 1 }); renderReportSelected(); addRepuestoModal.hide(); } }
+    });
+
+    document.getElementById('reportSelected').addEventListener('input', (ev)=>{ const t = ev.target; if(t && t.classList && t.classList.contains('qty-input')){ const idx = Number(t.dataset.idx); const v = parseInt(t.value,10) || 1; if(reportSelected[idx]) reportSelected[idx].qty = v; updateReportTotals(); } });
+    document.getElementById('reportLabour').addEventListener('input', updateReportTotals);
+    document.getElementById('reportPrint').addEventListener('click', ()=>{
+      const ord = document.getElementById('reportOrderNumber').textContent;
+      const details = document.getElementById('reportDetails').innerHTML;
+      let html = `<html><head><title>Informe ${ord}</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="p-4">`;
+      html += `<h3>Informe ${ord}</h3>${details}<hr/>`;
+      html += `<table class="table"><thead><tr><th>Repuesto</th><th>Cantidad</th><th>Precio unitario (ARS)</th><th>Subtotal (ARS)</th></tr></thead><tbody>`;
+      reportSelected.forEach(it=>{ html += `<tr><td>${escapeHtml(it.name)}</td><td>${it.qty}</td><td class="text-end">${fmtMoney(it.unit_price)}</td><td class="text-end">${fmtMoney(it.qty * it.unit_price)}</td></tr>`; });
+      html += `</tbody></table>`;
+      html += `<div><strong>Mano de Obra:</strong> ${fmtMoney(Number(document.getElementById('reportLabour').value||0))} ARS</div>`;
+      html += `<div class="mt-3"><strong>Total:</strong> ${document.getElementById('reportTotal').textContent} ARS</div>`;
+      html += `</body></html>`;
+      const w = window.open('', '_blank'); w.document.write(html); w.document.close(); w.focus(); w.print();
+    });
+    document.getElementById('reportSave').addEventListener('click', async ()=>{
+      try{
+        const ord = document.getElementById('reportOrderNumber').textContent;
+        // extract repair id from displayed order - safer to keep repair id on modal data
+        // We'll store currentRepairId when opening
+        if(!window.currentReportRepairId){ showToast('ID de reparación desconocido','warning'); return; }
+        const payload = { repair_id: window.currentReportRepairId, labour_amount: Number(document.getElementById('reportLabour').value||0), labour_notes: (document.getElementById('reportLabourNotes').value||'').trim(), items: [] };
+        reportSelected.forEach(it=>{ payload.items.push({ item_id: it.id, item_name: it.name, qty: it.qty, unit_price: it.unit_price }); });
+        const res = await axios.post('/api/repair_reports.php', payload, { headers: getAuthHeaders() });
+        if(res && res.data && res.data.report_id){ showToast('Informe guardado','success'); document.getElementById('reportPrint').click(); reportModal.hide(); await loadRepairs(); }
+        else { showToast('No se pudo guardar informe','danger'); }
+      }catch(e){ console.error(e); showToast('Error guardando informe','danger'); }
+    });
+
+    // If page opened with #order, open modal to create a new repair/order and focus customer
+    if(window.location.hash === '#order'){
+      // emulate click on new button to set defaults
+      try{ document.getElementById('btnNew').click(); }catch(e){}
+      setTimeout(()=>{ const el=document.getElementById('repairCustomerSearch'); if(el) el.focus(); }, 200);
+      // clear hash to avoid repeated auto-open on reload
+      try{ history.replaceState(null, '', window.location.pathname + window.location.search); }catch(e){}
+    }
+
+    function openNewRepair(){
+      const formEl = document.getElementById('repairForm'); if(formEl) formEl.reset();
+      const idEl = document.getElementById('repairId'); if(idEl) idEl.value = '';
+      const statusEl = document.getElementById('repairStatus'); if(statusEl) statusEl.value = 'received';
+      // set date to now
+      const now = new Date();
+      const local = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+      const dateEl = document.getElementById('repairDate'); if(dateEl) dateEl.value = local;
+      // reset customer/device selects
+      const custSearch = document.getElementById('repairCustomerSearch'); if(custSearch) custSearch.value = '';
+      const custId = document.getElementById('repairCustomerId'); if(custId) custId.value = '';
+      const dsel = document.getElementById('repairDeviceSelect'); if(dsel){ dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; dsel.disabled = true; }
+      const orderSpan = document.getElementById('repairOrderNumber'); if(orderSpan) orderSpan.textContent = '';
+      try{ repairModal.show(); }catch(e){ console.error('repairModal not available', e); }
+    }
+    const btnNewEl = document.getElementById('btnNew'); if(btnNewEl) btnNewEl.addEventListener('click', openNewRepair);
+    // Delegated fallback: handle clicks if direct listener didn't attach
+    document.body.addEventListener('click', (ev)=>{ const t = ev.target; if(!t) return; if(t.id==='btnNew' || (t.closest && t.closest('#btnNew'))){ ev.preventDefault(); openNewRepair(); } });
+
+    document.querySelector('#repairsTable').addEventListener('click', async (e)=>{
+      try{
+        if(e.target.dataset.id){
+          const id = e.target.dataset.id;
+          const res = await axios.get('/api/repairs.php?id='+id, { headers: getAuthHeaders() });
+          const r = res.data || {};
+          document.getElementById('repairId').value = r.id || '';
+          // technician select
+          const techSel = document.getElementById('repairTechSelect'); if(techSel){ for(let i=0;i<techSel.options.length;i++){ if(techSel.options[i].value==r.technician_id){ techSel.selectedIndex = i; break; } } }
+          document.getElementById('repairCustomerId').value = r.customer_id || '';
+          document.getElementById('repairCustomerSearch').value = r.customer_name ? (r.customer_name + (r.phone ? (' — '+r.phone) : '')) : '';
+          // load devices for customer and preselect
+          const dsel = document.getElementById('repairDeviceSelect'); if(dsel){ dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; dsel.disabled = true; if(r.customer_id){ try{ const devRes = await axios.get('/api/devices.php?customer_id='+r.customer_id, { headers: getAuthHeaders() }); (devRes.data||[]).forEach(d=>{ const opt=document.createElement('option'); opt.value=d.id; opt.text=(d.brand||'')+ ' ' + (d.model||'') + (d.serial?(' — '+d.serial):''); dsel.appendChild(opt); }); dsel.disabled=false; for(let i=0;i<dsel.options.length;i++){ if(dsel.options[i].value==r.device_id || dsel.options[i].text.indexOf(r.device_model||'')!==-1){ dsel.selectedIndex=i; break; } } }catch(e){} } }
+          document.getElementById('repairDate').value = r.scheduled_at ? r.scheduled_at.replace(' ', 'T') : '';
+          document.getElementById('repairStatus').value = r.status || 'en reparacion';
+          document.getElementById('repairProblem').value = r.problem || '';
+          // populate contact name/phone if available on repair or customer
+          document.getElementById('repairContactName').value = r.contact_name || r.customer_contact_name || '';
+          document.getElementById('repairContactPhone').value = r.contact_phone || r.customer_contact_phone || r.contact || '';
+          // show order number in modal title if available
+          const orderSpan = document.getElementById('repairOrderNumber'); if(orderSpan) orderSpan.textContent = r.order_number || '';
+          repairModal.show();
+          // If the repair is concluded, disable editing in the popup and show Edit Order link for admins
+          try{
+            const concluded = r.status && (String(r.status).toUpperCase() === 'DONE' || String(r.status).toLowerCase() === 'done');
+            const saveBtn = document.getElementById('saveRepair');
+            if(concluded){
+              document.querySelectorAll('#repairForm input, #repairForm select, #repairForm textarea').forEach(el=>el.disabled = true);
+              if(saveBtn) saveBtn.disabled = true;
+              // show edit-order link only for admins (heuristic: localStorage role)
+              if(localStorage.getItem('role') === 'admin'){
+                let link = document.getElementById('editOrderLink');
+                if(!link){
+                  link = document.createElement('a');
+                  link.id = 'editOrderLink';
+                  link.className = 'btn btn-sm btn-warning ms-2';
+                  link.textContent = 'Editar Orden';
+                  link.href = '/admin/repairs.html?orderId=' + r.id;
+                  if(saveBtn && saveBtn.parentNode) saveBtn.parentNode.insertBefore(link, saveBtn.nextSibling);
+                } else { link.style.display = 'inline-block'; }
+              }
+            } else {
+              // ensure enabled
+              document.querySelectorAll('#repairForm input, #repairForm select, #repairForm textarea').forEach(el=>el.disabled = false);
+              if(saveBtn) saveBtn.disabled = false;
+              const link = document.getElementById('editOrderLink'); if(link) link.style.display = 'none';
+            }
+          }catch(e){ /* ignore UI errors */ }
+        } else if(e.target.dataset.report){
+          await openReport(e.target.dataset.report);
+        } else if(e.target.dataset.del){
+          if(confirm('Confirmar borrado')){
+            await axios.delete('/api/repairs.php?id='+e.target.dataset.del, { headers: getAuthHeaders() });
+            showToast('Reparación borrada','success');
+            loadRepairs();
+          }
+        }
+      }catch(err){ showToast('Error en operación','danger'); }
+    });
+
+    document.getElementById('saveRepair').addEventListener('click', async ()=>{
+      const id = document.getElementById('repairId').value;
+      const techSel = document.getElementById('repairTechSelect');
+      const deviceSel = document.getElementById('repairDeviceSelect');
+      const payload = {
+        technician_id: techSel && techSel.value ? techSel.value : null,
+        customer_id: document.getElementById('repairCustomerId').value||null,
+        device_id: deviceSel && deviceSel.value ? deviceSel.value : null,
+        device_model: (deviceSel && deviceSel.selectedIndex>0) ? deviceSel.options[deviceSel.selectedIndex].text : null,
+        scheduled_at: (document.getElementById('repairDate').value||'').replace('T',' '),
+        status: document.getElementById('repairStatus').value,
+        problem: document.getElementById('repairProblem').value.trim() || null,
+        contact_name: document.getElementById('repairContactName').value.trim() || null,
+        contact_phone: document.getElementById('repairContactPhone').value.trim() || null,
+      };
+      try{
+        const isCreate = !id;
+        const sleep = (ms)=>new Promise(res=>setTimeout(res,ms));
+        // validate that selected device (if any) belongs to the selected customer
+        const cid = document.getElementById('repairCustomerId').value || null;
+        if(payload.device_id && cid){
+          try{
+            const devInfo = (await axios.get('/api/devices.php?id=' + payload.device_id, { headers: getAuthHeaders() })).data || {};
+            if(String(devInfo.customer_id || '') !== String(cid)){
+              showToast('El dispositivo seleccionado no pertenece al cliente elegido', 'warning');
+              return;
+            }
+          }catch(e){ showToast('No se pudo validar el dispositivo seleccionado', 'warning'); return; }
+        }
+        if(id){
+          await axios.put('/api/repairs.php?id='+id, payload, { headers: getAuthHeaders() });
+          showToast('Reparación actualizada','success');
+        } else {
+          const res = await axios.post('/api/repairs.php', payload, { headers: getAuthHeaders() });
+          showToast('Reparación creada','success');
+          if(res && res.data && res.data.order_number){ const orderSpan = document.getElementById('repairOrderNumber'); if(orderSpan) orderSpan.textContent = res.data.order_number; }
+          const contactName = payload.contact_name || '';
+          const contactPhone = payload.contact_phone || '';
+          if(contactName || contactPhone){
+            showToast('Contacto guardado en orden','info', 6000);
+          }
+        }
+        // after saving repair, also persist contact info into the customer record if provided
+        const custId = document.getElementById('repairCustomerId').value || null;
+        if(custId){
+          const upd = {};
+          if(document.getElementById('repairContactName').value.trim()) upd.contact_name = document.getElementById('repairContactName').value.trim();
+          if(document.getElementById('repairContactPhone').value.trim()) upd.contact_phone = document.getElementById('repairContactPhone').value.trim();
+          if(Object.keys(upd).length){
+            try{ await axios.put('/api/customers.php?id='+custId, upd, { headers: getAuthHeaders() }); showToast('Contacto del cliente actualizado','success'); }catch(e){ console.warn('No se pudo actualizar cliente', e); }
+          }
+        }
+        // If a new repair was created, keep the modal open briefly so the user sees the order number
+        if(isCreate){ try{ await sleep(3000); }catch(e){} }
+        repairModal.hide();
+        await loadRepairs();
+      }catch(err){
+        console.error('Error saving repair:', err);
+        const msg = (window.formatError) ? window.formatError(err) : (err && err.message ? err.message : 'Error guardando reparación');
+        showToast(msg, 'danger', 8000);
+      }
+    });
+
+    loadRepairs();
+  </script>
+</body>
+</html>
