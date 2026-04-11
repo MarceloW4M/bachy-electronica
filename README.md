@@ -148,7 +148,7 @@ mysql -h 127.0.0.1 -P 3307 -u bachy -psecret bachy < db/migrations/20260412_add_
 ```
 
 - Cambios clave:
-	- `public/api/repair_reports.php`: al insertar el informe, calcula totales, crea las líneas y actualiza la orden (`repairs`) con `parts_total`, `labour_price`, `total_amount` y establece `status = 'Concluido'`.
+	- `public/api/repair_reports.php`: al insertar el informe, calcula totales, crea las líneas y actualiza la orden (`repairs`) con `parts_total`, `labour_price`, `total_amount` y establece `status = 'Completada'`.
 	- `public/api/repairs.php`: rechaza `PUT` cuando la orden tiene estado `done` o `concluido` (case-insensitive).
 	- `public/admin/repairs.html`: el modal de edición se deshabilita si la orden está concluida; al guardar informe la lista se refresca; se muestra un enlace "Editar Orden" solo para administradores (`localStorage.role === 'admin'`).
 

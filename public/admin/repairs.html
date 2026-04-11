@@ -479,7 +479,8 @@
           repairModal.show();
           // If the repair is concluded, disable editing in the popup and show Edit Order link for admins
           try{
-            const concluded = r.status && (String(r.status).toUpperCase() === 'DONE' || String(r.status).toLowerCase() === 'done');
+            const s = String(r.status || '').toLowerCase();
+            const concluded = ['done','concluido','completada'].includes(s);
             const saveBtn = document.getElementById('saveRepair');
             if(concluded){
               document.querySelectorAll('#repairForm input, #repairForm select, #repairForm textarea').forEach(el=>el.disabled = true);

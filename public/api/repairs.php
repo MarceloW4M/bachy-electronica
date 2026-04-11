@@ -70,8 +70,8 @@ if ($method === 'GET') {
         $where[] = 'r.status = ?';
         $params[] = $status;
     } else {
-        // By default exclude completed orders (status = 'done' or 'DONE')
-        $where[] = "(r.status IS NULL OR LOWER(r.status) <> 'done')";
+        // By default exclude completed orders (status = 'done', 'concluido' or 'completada')
+        $where[] = "(r.status IS NULL OR LOWER(r.status) NOT IN ('done','concluido','completada'))";
     }
 
     $sql = 'SELECT r.*, c.name AS customer_name, c.contact_name AS customer_contact_name, c.contact_phone AS customer_contact_phone, c.email AS customer_email, t.name AS technician_name, d.serial AS device_serial, d.brand AS device_brand, d.model AS device_model FROM repairs r LEFT JOIN customers c ON c.id = r.customer_id LEFT JOIN technicians t ON t.id = r.technician_id LEFT JOIN devices d ON d.id = r.device_id';
@@ -125,7 +125,7 @@ if ($method === 'PUT') {
         $chk = $pdo->prepare('SELECT status FROM repairs WHERE id = ?');
         $chk->execute([$id]);
         $cur = $chk->fetch();
-        if($cur && isset($cur['status']) && strtolower($cur['status']) === 'done'){
+        if($cur && isset($cur['status']) && in_array(strtolower($cur['status']), ['done','concluido','completada'])){
             http_response_code(403);
             echo json_encode(['error' => 'No se puede editar una orden concluida'], JSON_UNESCAPED_UNICODE);
             exit;
