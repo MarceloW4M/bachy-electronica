@@ -120,7 +120,7 @@ if ($method === 'PUT') {
         exit;
     }
 
-    // Prevent editing if order is concluded (DONE or done)
+    // Prevent editing if order is completed (Completada / done)
     try{
         $chk = $pdo->prepare('SELECT status FROM repairs WHERE id = ?');
         $chk->execute([$id]);

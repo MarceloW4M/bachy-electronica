@@ -83,7 +83,7 @@ if ($method === 'POST') {
             }
         }
 
-        // Update the parent repair with calculated totals and mark as concluded (DONE)
+        // Update the parent repair with calculated totals and mark as completed (Completada)
         try{
             $upd = $pdo->prepare('UPDATE repairs SET parts_total = ?, labour_price = ?, total_amount = ?, status = ? WHERE id = ?');
             $upd->execute([round($subtotal,2), round($labour,2), round($total,2), 'Completada', $repair_id]);

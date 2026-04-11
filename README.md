@@ -138,7 +138,7 @@ Buenas prácticas
 
 ## Nota: comportamiento al guardar Informes
 
-Resumen: al guardar un informe desde la UI se registran los repuestos, la mano de obra y los subtotales en la orden de reparación asociada; la orden pasa a estado "Concluido" y queda protegida contra ediciones desde el popup de reparación.
+Resumen: al guardar un informe desde la UI se registran los repuestos, la mano de obra y los subtotales en la orden de reparación asociada; la orden pasa a estado "Completada" y queda protegida contra ediciones desde el popup de reparación.
 
 - Migración incluida: `db/migrations/20260412_add_totals_to_repairs.sql` — añade columnas `parts_total`, `labour_price`, `total_amount` en `repairs`.
 - Para aplicar la migración manualmente (ejemplo con MySQL expuesto por Docker):
@@ -149,14 +149,14 @@ mysql -h 127.0.0.1 -P 3307 -u bachy -psecret bachy < db/migrations/20260412_add_
 
 - Cambios clave:
 	- `public/api/repair_reports.php`: al insertar el informe, calcula totales, crea las líneas y actualiza la orden (`repairs`) con `parts_total`, `labour_price`, `total_amount` y establece `status = 'Completada'`.
-	- `public/api/repairs.php`: rechaza `PUT` cuando la orden tiene estado `done` o `concluido` (case-insensitive).
+	 - `public/api/repairs.php`: rechaza `PUT` cuando la orden tiene estado `done` o `completada` (case-insensitive).
 	- `public/admin/repairs.html`: el modal de edición se deshabilita si la orden está concluida; al guardar informe la lista se refresca; se muestra un enlace "Editar Orden" solo para administradores (`localStorage.role === 'admin'`).
 
 - Pruebas recomendadas:
 	1. Ejecutar la migración.
 	2. Crear una orden de reparación desde la UI o via API.
 	3. Abrir el modal Informe, agregar repuestos y mano de obra, y pulsar "Guardar informe".
-	4. Verificar en BD (`SELECT parts_total, labour_price, total_amount, status FROM repairs WHERE id = <ID>;`) que la orden tiene los totales y `status = 'Concluido'`.
+	4. Verificar en BD (`SELECT parts_total, labour_price, total_amount, status FROM repairs WHERE id = <ID>;`) que la orden tiene los totales y `status = 'Completada'`.
 	5. Intentar editar la orden (popup o PUT a la API); la edición debe rechazarse (403).
 
 Si quieres, puedo crear un `CONTRIBUTING.md` con estos pasos y comandos listos para ejecutarse.
