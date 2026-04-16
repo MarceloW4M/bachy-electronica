@@ -1,0 +1,64 @@
+# We use Tiendanube as our ecommerce platform: https://www.tiendanube.com
+
+User-agent: *
+Disallow: /admin/
+Disallow: /account/
+Disallow: /checkout/
+Disallow: /*?*preview_theme_installation_id*
+Disallow: /*?*exit_preview_theme_installation*
+Disallow: /*?*srsltid=*
+Disallow: /blog/drafts/*
+Disallow: /comprar/
+Disallow: /comprar-express/
+Disallow: /search/
+Disallow: /envio/
+Disallow: /fb-comment/
+Disallow: /ar/comprar/
+Disallow: /ar/comprar-express/
+Disallow: /ar/search/
+Disallow: /ar/envio/
+Disallow: /ar/fb-comment/
+
+Sitemap: https://acdn-us.mitiendanube.com/stores/005/044/798/themes/common/sitemap.xml.gz
+Sitemap: https://acdn-us.mitiendanube.com/stores/005/044/798/themes/common/sitemap_blog.xml.gz
+
+# Google adsbot must be specifically named
+User-agent: adsbot-google
+Disallow: /admin/
+Disallow: /account/
+Disallow: /checkout/
+Disallow: /*?*preview_theme_installation_id*
+Disallow: /*?*exit_preview_theme_installation*
+Disallow: /*?*srsltid=*
+Disallow: /blog/drafts/*
+Disallow: /comprar/
+Disallow: /comprar-express/
+Disallow: /search/
+Disallow: /envio/
+Disallow: /fb-comment/
+Disallow: /ar/comprar/
+Disallow: /ar/comprar-express/
+Disallow: /ar/search/
+Disallow: /ar/envio/
+Disallow: /ar/fb-comment/
+
+User-agent: WBSearchBot
+Disallow: /
+
+User-agent: TurnitinBot
+Disallow: /
+
+User-agent: Nutch
+Disallow: /
+
+User-agent: URLmetrica
+Disallow: /
+
+User-agent: MJ12bot
+Crawl-Delay: 10
+
+User-agent: Pinterest
+Crawl-delay: 1
+
+User-agent: SemrushBot
+Crawl-delay: 10

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administración - Finanzas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+
+  <div class="container py-4">
+    <div class="row">
+      <div class="col-md-8 offset-md-2">
+        <div class="card">
+          <div class="card-body">
+            <h3 class="h5">Finanzas</h3>
+            <p class="text-muted">Actualiza la cotización del dólar que usan las operaciones y facturación.</p>
+            <div class="mb-3">
+              <label class="form-label">Tasa USD (ARS por USD)</label>
+              <input id="usdRate" class="form-control" type="number" step="0.01" value="350">
+            </div>
+            <div class="mb-3">
+              <button id="fetchQuotes" class="btn btn-outline-secondary">Obtener cotizaciones automáticas</button>
+            </div>
+            <div class="mb-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <label class="form-label">Oficial</label>
+                  <div id="quoteOfficial" class="border rounded p-2">—</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Blue</label>
+                  <div id="quoteBlue" class="border rounded p-2">—</div>
+                </div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Usar cotización</label>
+              <div>
+                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="quoteSource" id="use_official" value="official"><label class="form-check-label" for="use_official">Oficial</label></div>
+                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="quoteSource" id="use_blue" value="blue"><label class="form-check-label" for="use_blue">Blue</label></div>
+              </div>
+            </div>
+            <div class="mb-3">
+              <button id="saveRate" class="btn btn-primary">Guardar tasa</button>
+              <button id="applyPrices" class="btn btn-outline-primary ms-2">Aplicar precios (verificación)</button>
+              <button id="saveIva" class="btn btn-secondary ms-2">Guardar IVA</button>
+            </div>
+              <div class="mb-3">
+                <label class="form-label">Tipo de IVA para facturación</label>
+                <select id="ivaType" class="form-select">
+                  <option value="21">21% (IVA general)</option>
+                  <option value="10.5">10.5% (IVA reducido)</option>
+                  <option value="0">Exento / No gravado</option>
+                </select>
+              </div>
+              <div id="currentInfo" class="mt-3 small text-muted"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/admin-utils.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const el = document.getElementById('usdRate');
+      const info = document.getElementById('currentInfo');
+      async function loadRate(){
+        try{
+          const res = await axios.get('/api/settings.php?key=usd_rate');
+          if(res && typeof res.data !== 'undefined' && res.data !== null){ el.value = res.data; }
+        }catch(e){ console.warn('No se pudo cargar tasa desde servidor, usando valor local'); }
+      }
+      function refreshInfo(){ info.textContent = 'Tasa actual: ' + parseFloat(el.value || 0).toFixed(2) + ' ARS/USD'; }
+      loadRate().then(refreshInfo);
+      document.getElementById('saveRate').addEventListener('click', async ()=>{
+        const v = parseFloat(el.value);
+        if(!v || v <= 0){ AdminUtils.showToast('Ingrese una tasa válida', 'warning'); return; }
+        try{
+          // save selected source if any
+          const source = document.querySelector('input[name="quoteSource"]:checked');
+          const payload = { key: 'usd_rate', value: String(v) };
+          await axios.put('/api/settings.php', payload);
+          if (source && source.value) {
+            await axios.put('/api/settings.php', { key: 'usd_rate_source', value: source.value });
+          }
+          AdminUtils.showToast('Tasa guardada en servidor', 'success');
+          refreshInfo();
+        }catch(e){ AdminUtils.showToast('Error guardando tasa en servidor', 'danger'); }
+      });
+      // IVA handling: load/save via API (fallback to localStorage)
+      const ivaSel = document.getElementById('ivaType');
+      async function loadIva(){
+        try{
+          const res = await axios.get('/api/settings.php?key=iva_type');
+          if(res && typeof res.data !== 'undefined' && res.data !== null){ if(ivaSel) ivaSel.value = res.data; }
+          else {
+            const stored = localStorage.getItem('iva_type'); if(stored && ivaSel) ivaSel.value = stored;
+          }
+        }catch(e){ const stored = localStorage.getItem('iva_type'); if(stored && ivaSel) ivaSel.value = stored; }
+      }
+
+      document.getElementById('saveIva').addEventListener('click', async ()=>{
+        if(!ivaSel) return;
+        try{
+          await axios.put('/api/settings.php', { key: 'iva_type', value: String(ivaSel.value) });
+          localStorage.setItem('iva_type', ivaSel.value);
+          AdminUtils.showToast('Tipo de IVA guardado: ' + (ivaSel.value === '0' ? 'Exento' : ivaSel.value + '%'), 'success');
+          refreshIvaInfo();
+        }catch(e){ AdminUtils.showToast('Error guardando IVA en servidor', 'danger'); }
+      });
+      document.getElementById('applyPrices').addEventListener('click', ()=>{
+        // Placeholder: currently only notifies; price recalculation should be done per-module
+        AdminUtils.showToast('Tasa aplicada localmente. Verifique precios en Artículos y Facturación.', 'info');
+      });
+      // Fetch quotes (official + blue)
+      document.getElementById('fetchQuotes').addEventListener('click', async ()=>{
+        const offEl = document.getElementById('quoteOfficial');
+        const blueEl = document.getElementById('quoteBlue');
+        offEl.textContent = 'Cargando...'; blueEl.textContent = 'Cargando...';
+        try{
+          // exchangerate.host for official
+          const res1 = await axios.get('https://api.exchangerate.host/latest?base=USD&symbols=ARS');
+          const official = res1 && res1.data && res1.data.rates && res1.data.rates.ARS ? parseFloat(res1.data.rates.ARS) : null;
+          // bluelytics for blue
+          const res2 = await axios.get('https://api.bluelytics.com.ar/v2/latest');
+          const blue = res2 && res2.data && res2.data.blue && (res2.data.blue.value_sell || res2.data.blue.value_buy) ? (res2.data.blue.value_sell || res2.data.blue.value_buy) : null;
+          offEl.textContent = official ? official.toFixed(2) + ' ARS' : 'N/A';
+          blueEl.textContent = blue ? blue.toFixed(2) + ' ARS' : 'N/A';
+          // set radio selection to previous saved source or keep
+          const savedSource = (await (async ()=>{ try{ const r=await axios.get('/api/settings.php?key=usd_rate_source'); return r.data; }catch(e){ return null; } })()) || null;
+          if (savedSource === 'blue' && document.getElementById('use_blue')) document.getElementById('use_blue').checked = true;
+          else if (savedSource === 'official' && document.getElementById('use_official')) document.getElementById('use_official').checked = true;
+          // if no saved source, choose official by default
+          if (!savedSource && document.getElementById('use_official')) document.getElementById('use_official').checked = true;
+          // if user wants to apply selected quote to usdRate input automatically
+          const selected = document.querySelector('input[name="quoteSource"]:checked');
+          if (selected && selected.value === 'official' && official) el.value = official;
+          if (selected && selected.value === 'blue' && blue) el.value = blue;
+          AdminUtils.showToast('Cotizaciones actualizadas', 'success');
+        }catch(e){
+          offEl.textContent = 'Error'; blueEl.textContent = 'Error';
+          AdminUtils.showToast('No se pudieron obtener cotizaciones externas', 'danger');
+        }
+      });
+      // show current IVA in info panel
+      function refreshIvaInfo(){
+        const iva = (ivaSel && ivaSel.value) ? ivaSel.value : (localStorage.getItem('iva_type') || '21');
+        info.textContent = info.textContent + ' • IVA por defecto: ' + (iva === '0' ? 'Exento' : iva + '%');
+      }
+      loadIva().then(refreshIvaInfo);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: bachy-app
+    restart: unless-stopped
+    ports:
+      - "8185:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+  db:
+    image: mysql:8.0
+    container_name: bachy-db
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: bachy
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: bachy
+      MYSQL_PASSWORD: secret
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  mcp:
+    build:
+      context: .
+      dockerfile: mcp/bachy-db-mcp/Dockerfile
+    container_name: bachy-mcp
+    restart: unless-stopped
+    ports:
+      - "3101:3101"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 3101
+      BACHY_MCP_DB_HOST: db
+      BACHY_MCP_DB_PORT: 3306
+
+volumes:
+  mysql_data:

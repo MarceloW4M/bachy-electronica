@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Registro - Bachy Electrónica</title>
+  <meta name="description" content="Registrate en Bachy Electrónica para compras y servicios.">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css?family=Poppins:400,700&display=swap" />
+  <link rel="preload" href="https://acdn-us.mitiendanube.com/stores/005/044/798/themes/toluca/dart-style-critical-e1dfd13c8547b8f3f05e4ef57f713025.css" as="style" />
+  <link rel="preload" href="https://acdn-us.mitiendanube.com/stores/005/044/798/themes/toluca/dart-style-colors-a78d7efba31f0183141854560e9fbce0.css" as="style" />
+  <link rel="stylesheet" type="text/css" href="https://acdn-us.mitiendanube.com/stores/005/044/798/themes/toluca/dart-style-critical-e1dfd13c8547b8f3f05e4ef57f713025.css" media="all" />
+  <link rel="stylesheet" type="text/css" href="https://acdn-us.mitiendanube.com/stores/005/044/798/themes/toluca/dart-style-colors-a78d7efba31f0183141854560e9fbce0.css" media="all" />
+  <link rel="stylesheet" href="https://acdn-us.mitiendanube.com/stores/005/044/798/themes/toluca/dart-style-async-6dfbd53387630b6bae26bf1cd48e3a06.css" media="print" onload="this.media='all'">
+  <style>/* small local tweaks to match container spacing */
+    .panel{padding:28px;background:#fff;border-radius:12px;border:1px solid #eee}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .form-grid .full{grid-column:1/-1}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="row align-items-center py-3">
+        <div class="col-6 col-md-4">
+          <a href="/" title="Bachy Electrónica"><img src="https://acdn-us.mitiendanube.com/stores/005/044/798/themes/common/logo-293590710-1768308304-f44dae3f39b55b512e091dde8e335ae61768308304-480-0.webp" alt="Bachy Electrónica" style="max-width:220px;height:auto"></a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="institutional-background py-5">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-8">
+          <div class="panel">
+            <h1 class="h2">Registro de cliente</h1>
+            <p>Completá los datos para crear tu cuenta en el sistema BACHY-TW. La contraseña se guarda en forma segura.</p>
+
+            <form id="regForm">
+              <div class="form-grid">
+                <label>Nombre completo
+                  <input name="name" required class="form-control">
+                </label>
+
+                <label>DNI / CUIT
+                  <input name="dni_cuit" inputmode="numeric" class="form-control">
+                </label>
+
+                <label>Teléfono
+                  <input name="phone" inputmode="tel" class="form-control">
+                </label>
+
+                <label>Email
+                  <input type="email" name="email" class="form-control">
+                </label>
+
+                <label class="full">Dirección
+                  <input name="address" class="form-control">
+                </label>
+
+                <label>Código postal
+                  <input name="postal_code" class="form-control">
+                </label>
+
+                <label>Contacto adicional
+                  <input name="contact_name" class="form-control">
+                </label>
+
+                <label>Teléfono de contacto
+                  <input name="contact_phone" inputmode="tel" class="form-control">
+                </label>
+
+                <label>Contraseña
+                  <input type="password" name="password" minlength="8" required class="form-control">
+                </label>
+
+                <label>Repetir contraseña
+                  <input type="password" name="password_confirm" minlength="8" required class="form-control">
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary mt-3">Crear cuenta</button>
+            </form>
+
+            <div id="msg" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer py-4">
+    <div class="container text-center">
+      <small>Copyright Bachy Electrónica - 2026</small>
+    </div>
+  </footer>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js" async></script>
+  <script>
+  const form = document.getElementById('regForm');
+  const msg = document.getElementById('msg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    msg.textContent = '';
+    const data = Object.fromEntries(new FormData(form).entries());
+    if (data.password !== data.password_confirm) { msg.style.color='red'; msg.textContent='Las contraseñas no coinciden.'; return; }
+    if (data.password.length < 8) { msg.style.color='red'; msg.textContent='La contraseña debe tener al menos 8 caracteres.'; return; }
+    delete data.password_confirm;
+    try {
+      const res = await fetch('/api/customers.php', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+      const body = await res.json();
+      if (!res.ok) { msg.style.color='red'; msg.textContent = body.error || JSON.stringify(body); return; }
+      msg.style.color='green'; msg.textContent = 'Registro completado. ID cliente: ' + (body.id || 'n/a'); form.reset();
+    } catch(err){ msg.style.color='red'; msg.textContent='Error de conexión: '+err.message }
+  });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Compras</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+  <div class="container">
+    <h1 class="h4 mb-3">Compras</h1>
+    <div class="card mb-3"><div class="card-body">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label">Proveedor</label>
+          <select id="supplierSelect" class="form-select"><option value="">Sin asignar</option></select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Depósito</label>
+          <select id="warehouseSelect" class="form-select"><option value="">Sin asignar</option></select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Buscar artículo</label>
+          <input id="itemSearch" class="form-control" placeholder="buscar por nombre, sku o barcode..." />
+        </div>
+      </div>
+      <div class="row g-2 mt-2 align-items-end">
+        <div class="col-md-3"><label class="form-label">Marca</label><select id="brandFilter" class="form-select"><option value="">Todas</option></select></div>
+        <div class="col-md-3"><label class="form-label">Categoría</label><select id="categoryFilter" class="form-select"><option value="">Todas</option></select></div>
+        <div class="col-md-4"><label class="form-label">Artículo (seleccione)</label><select id="itemSelect" class="form-select"></select></div>
+        <div class="col-md-2"><button id="btnAddItem" class="btn btn-primary w-100">Agregar</button></div>
+      </div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <table class="table"><thead><tr><th>Artículo</th><th>Cant</th><th>Precio</th><th></th></tr></thead><tbody id="purchaseItems"></tbody></table>
+      <div class="d-flex justify-content-end"><button id="btnCreatePurchase" class="btn btn-success">Crear Compra</button></div>
+    </div></div>
+    <div class="card mt-3"><div class="card-body">
+      <h5>Compras recientes</h5>
+      <table class="table"><thead><tr><th>ID</th><th>Nombre</th><th>Marca</th><th class="text-end">Acciones</th></tr></thead><tbody id="purchasesList"></tbody></table>
+    </div></div>
+  </div>
+</body>
+</html>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    let ALL_ITEMS = [];
+    function renderItemOptions(filtered){
+      const itemSel = document.getElementById('itemSelect'); itemSel.innerHTML = '';
+      filtered.forEach(i=>{ const o=document.createElement('option'); o.value=i.id; o.text = i.name + ' (' + (i.sku||'') + ')'; itemSel.appendChild(o); });
+    }
+    function applyFilters(){
+      const q = (document.getElementById('itemSearch').value||'').toLowerCase();
+      const brand = document.getElementById('brandFilter').value;
+      const cat = document.getElementById('categoryFilter').value;
+      let filtered = ALL_ITEMS.filter(i=>{
+        if(brand && String(i.brand_id)!==String(brand)) return false;
+        if(cat && String(i.category_id)!==String(cat)) return false;
+        if(!q) return true;
+        return (i.name||'').toLowerCase().includes(q) || (i.sku||'').toLowerCase().includes(q) || (i.barcode||'').toLowerCase().includes(q) || (String(i.id)||'').includes(q);
+      });
+      renderItemOptions(filtered);
+    }
+
+    async function loadPurchaseHelpers(){
+      const [supRes, itemsRes, whRes, brandsRes, catsRes] = await Promise.all([
+        axios.get('/api/suppliers.php?all=1'),
+        axios.get('/api/items.php?all=1'),
+        axios.get('/api/warehouses.php?all=1'),
+        axios.get('/api/brands.php?all=1'),
+        axios.get('/api/categories.php?all=1')
+      ]);
+      const suppliers = supRes.data || [];
+      ALL_ITEMS = itemsRes.data || [];
+      const warehouses = whRes.data || [];
+      const brands = brandsRes.data || [];
+      const categories = catsRes.data || [];
+
+      const supplierSel = document.getElementById('supplierSelect'); supplierSel.innerHTML = '<option value="">Sin asignar</option>';
+      suppliers.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.text=c.name; supplierSel.appendChild(o); });
+
+      const whSel = document.getElementById('warehouseSelect'); whSel.innerHTML = '<option value="">Sin asignar</option>';
+      warehouses.forEach(w=>{ const o=document.createElement('option'); o.value=w.id; o.text=w.name; whSel.appendChild(o); });
+
+      const brandSel = document.getElementById('brandFilter'); brandSel.innerHTML = '<option value="">Todas</option>';
+      brands.forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.text=b.name; brandSel.appendChild(o); });
+
+      const catSel = document.getElementById('categoryFilter'); catSel.innerHTML = '<option value="">Todas</option>';
+      categories.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.text=c.name; catSel.appendChild(o); });
+
+      // initial render
+      applyFilters();
+
+      // events
+      document.getElementById('itemSearch').addEventListener('input', debounce(applyFilters, 200));
+      document.getElementById('brandFilter').addEventListener('change', applyFilters);
+      document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+
+      document.getElementById('btnAddItem').addEventListener('click', ()=>{
+        const id = document.getElementById('itemSelect').value; const sel = ALL_ITEMS.find(x=>x.id==id); if(!sel) return;
+        const tbody = document.getElementById('purchaseItems'); const tr=document.createElement('tr'); tr.innerHTML = `<td>${sel.name}</td><td><input class="form-control qty" value="1" type="number" min="1"></td><td><input class="form-control price" value="${sel.unit_price||50}" type="number" step="0.01"></td><td><button class="btn btn-sm btn-danger btn-remove">X</button></td>`; tr.dataset.itemId = sel.id; tbody.appendChild(tr);
+      });
+      document.getElementById('purchaseItems').addEventListener('click',(e)=>{ if(e.target.classList.contains('btn-remove')) e.target.closest('tr').remove(); });
+      document.getElementById('btnCreatePurchase').addEventListener('click', async ()=>{
+        const supplier_id = document.getElementById('supplierSelect').value || null;
+        const warehouse_id = document.getElementById('warehouseSelect').value || null;
+        const rows = Array.from(document.querySelectorAll('#purchaseItems tr'));
+        if(rows.length===0){ alert('Agrega al menos un artículo'); return; }
+        const itemsPayload = rows.map(r=>({ item_id: r.dataset.itemId, quantity: parseInt(r.querySelector('.qty').value)||1, unit_price: parseFloat(r.querySelector('.price').value)||0 }));
+        try{ const res = await axios.post('/api/purchases.php', { supplier_id: supplier_id, warehouse_id: warehouse_id, items: itemsPayload }); alert('Compra creada id=' + res.data.id); location.reload(); }catch(e){ alert('Error creando compra'); }
+      });
+    }
+
+    // small debounce helper
+    function debounce(fn, wait){ let t; return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn.apply(this,args), wait); }; }
+
+    loadPurchaseHelpers();
+
+    async function loadPurchasesList(){
+      try{
+        const res = await axios.get('/api/purchases.php');
+        const tbody = document.getElementById('purchasesList'); tbody.innerHTML = '';
+        (res.data||[]).forEach(s=>{ const tr=document.createElement('tr'); const name = escapeHtml(s.supplier_name || s.supplier || ''); const brand = escapeHtml(s.brand_name || ''); tr.innerHTML = `<td>${s.id}</td><td>${name}</td><td>${brand}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><a class="btn btn-sm btn-primary btn-action" href="/admin/compras.html?id=${s.id}">Ver</a></div></td>`; tbody.appendChild(tr); });
+      }catch(e){ console.error(e); }
+    }
+    loadPurchasesList();
+  </script>

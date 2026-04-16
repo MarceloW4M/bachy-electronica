@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1"> 
+  <title>Alta de Cliente</title>
+  <style>
+    :root{--accent:#0b84ff;--bg:#ffffffcc}
+    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f6fb}
+    .bg-logo{display:none}
+    .logo-top{display:flex;justify-content:center;margin-bottom:8px}
+    .logo-top img{width:40%;max-width:220px;opacity:0.95;display:block}
+    @media (max-width:420px){.logo-top img{width:55%;max-width:160px}}
+    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:100%;max-width:520px;background:var(--bg);border-radius:14px;box-shadow:0 6px 24px rgba(10,10,20,0.08);padding:18px}
+    h1{font-size:20px;margin:0 0 12px;text-align:center}
+
+    .field{display:flex;flex-direction:column;margin-bottom:12px}
+    label{font-size:13px;color:#333;margin-bottom:6px}
+    input[type="text"],input[type="email"],input[type="tel"]{font-size:16px;padding:12px;border:1px solid #e1e4ef;border-radius:8px}
+    input:focus{outline:2px solid rgba(11,132,255,0.12);border-color:var(--accent)}
+
+    .muted{font-size:13px;color:#666}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+    button{background:var(--accent);color:#fff;border:none;padding:12px 14px;border-radius:10px;font-size:15px;cursor:pointer}
+    button.secondary{background:#eef2ff;color:#0b3b6b}
+    .hidden{display:none}
+    .error{color:#b00020;font-size:13px;margin-top:6px}
+    .success{color:green;font-size:14px;margin-top:6px}
+    .toast{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:#111;color:#fff;padding:14px 18px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:9999;font-size:16px}
+    @media (max-width:420px){.card{padding:14px;border-radius:10px}h1{font-size:18px}}
+  </style>
+</head>
+<body>
+  <div class="bg-logo" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="card" role="main">
+      <div class="logo-top"><img src="/img/logo.png" alt="logo"></div>
+      <h1>Alta de Cliente</h1>
+      <div class="field">
+        <label for="cuit">CUIT / DNI</label>
+        <input id="cuit" name="cuit" inputmode="numeric" pattern="[0-9]{8,11}" placeholder="Sólo números, 8 a 11 dígitos" autocomplete="off" />
+        <div id="cuit-help" class="muted">Ingrese sólo números.</div>
+        <div id="cuit-error" class="error hidden"></div>
+      </div>
+
+      <div id="check-result" class="muted"></div>
+
+      <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+      <div id="resto" class="hidden">
+        <div class="field" id="boot-field" style="display:none">
+          <label for="id_boot">Boot</label>
+          <input id="id_boot" name="id_boot" readonly />
+        </div>
+        <div class="field">
+          <label for="name">Nombre completo</label>
+          <input id="name" name="name" placeholder="Nombre y apellido" />
+        </div>
+        <div class="field">
+          <label for="address">Dirección</label>
+          <input id="address" name="address" placeholder="Calle 123, Barrio" />
+        </div>
+        <div class="field">
+          <label for="phone">Teléfono</label>
+          <input id="phone" name="phone" inputmode="tel" placeholder="01112345678" />
+        </div>
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input id="email" name="email" type="email" placeholder="mail@ejemplo.com" />
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:8px">
+        <button id="verifyBtn">Verificar CUIT</button>
+        <button id="submitBtn" class="secondary hidden">Crear cliente</button>
+      </div>
+
+      <div id="msg" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <script>
+    const cuitInput = document.getElementById('cuit');
+    const cuitError = document.getElementById('cuit-error');
+    const checkResult = document.getElementById('check-result');
+    const resto = document.getElementById('resto');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const msg = document.getElementById('msg');
+    const toast = document.getElementById('toast');
+    const cuitHelp = document.getElementById('cuit-help');
+
+    function cleanDigits(s){return (s||'').replace(/\D/g,'');}
+    function validCUIT(s){const d=cleanDigits(s);return d.length>=8 && d.length<=11;}
+
+    cuitInput.addEventListener('input', e=>{
+      const v = cleanDigits(e.target.value);
+      if (e.target.value !== v) e.target.value = v;
+      cuitError.classList.add('hidden');
+      checkResult.textContent = '';
+      resto.classList.add('hidden'); submitBtn.classList.add('hidden');
+      msg.textContent = '';
+      if (cuitHelp) cuitHelp.classList.remove('hidden');
+      // if user edits again, re-enable verify button and allow edits
+      verifyBtn.style.display = '';
+      cuitInput.readOnly = false;
+    });
+
+    async function checkCUIT(){
+      const val = cuitInput.value.trim();
+      if (!validCUIT(val)){
+        cuitError.textContent = 'CUIT/DNI inválido: debe tener sólo números y 8 a 11 dígitos.';
+        cuitError.classList.remove('hidden');
+        return;
+      }
+      cuitError.classList.add('hidden');
+      checkResult.textContent = '';
+      if (cuitHelp) cuitHelp.classList.add('hidden');
+
+      try{
+        const q = encodeURIComponent(val);
+        const res = await fetch('api/customers.php?dni=' + q, {cache:'no-store'});
+        if (!res.ok){ checkResult.textContent = 'Error al consultar el servidor'; return; }
+        const data = await res.json();
+        if (!data){
+          // CUIT no existe: mostrar formulario para crear
+          resto.classList.remove('hidden');
+          submitBtn.classList.remove('hidden');
+          // bloquear edición del CUIT y ocultar verificar
+          cuitInput.readOnly = true;
+          verifyBtn.style.display = 'none';
+          // show boot field if idBoot present
+          if (bootVar){
+            const bf = document.getElementById('boot-field');
+            const bi = document.getElementById('id_boot');
+            if (bf && bi){ bf.style.display = ''; bi.value = bootVar; }
+          }
+        } else {
+          // Cliente existe: mostrar solo popup con mensaje específico y cerrar
+          checkResult.textContent = '';
+          showToast('Este CUIT ya fue dado de alta como Cliente de Bachy Electrónica.', 3000, true);
+        }
+      }catch(err){
+        checkResult.textContent = 'Error de conexión';
+      }
+    }
+
+    verifyBtn.addEventListener('click', e=>{e.preventDefault();checkCUIT();});
+
+    submitBtn.addEventListener('click', async e=>{
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        dni_cuit: cuitInput.value.trim(),
+        address: document.getElementById('address').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        id_boot: (document.getElementById('id_boot') && document.getElementById('id_boot').value) ? document.getElementById('id_boot').value : null,
+      };
+      if (!payload.name){ msg.innerHTML = '<div class="error">El nombre es obligatorio.</div>'; return; }
+
+      submitBtn.disabled = true; submitBtn.textContent = 'Enviando...';
+      try{
+        const res = await fetch('api/customers.php', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json;charset=utf-8'},
+          body: JSON.stringify(payload)
+        });
+        const j = await res.json();
+        if (res.ok){
+          // mostrar popup de éxito y cerrar en 5s
+          showToast('Alta satisfactoria. Se enviará un mail de confirmación. Gracias!!!', 5000, true);
+          resto.classList.add('hidden'); submitBtn.classList.add('hidden');
+        } else {
+          msg.innerHTML = '<div class="error">Error: ' + (j.error||'Error al crear') + '</div>';
+        }
+      }catch(err){
+        msg.innerHTML = '<div class="error">Error de conexión.</div>';
+      } finally{ submitBtn.disabled = false; submitBtn.textContent = 'Crear cliente'; }
+    });
+
+    // allow enter to trigger verify when on cuit
+    cuitInput.addEventListener('keydown', e=>{ if (e.key==='Enter'){ e.preventDefault(); checkCUIT(); } });
+
+    // read id_boot from url params (n8n/telegram can pass it)
+    const urlParams = new URLSearchParams(window.location.search);
+    const bootVar = urlParams.get('id_boot') || urlParams.get('idBoot') || '';
+    if (bootVar){
+      // if provided, show boot field immediately but keep verify behavior
+      const bf = document.getElementById('boot-field');
+      const bi = document.getElementById('id_boot');
+      if (bf && bi){ bf.style.display = 'none'; bi.value = bootVar; }
+    }
+
+    function showToast(text, ms = 3000, closeWindow = false){
+      if (!toast) return;
+      toast.textContent = text;
+      toast.classList.remove('hidden');
+      setTimeout(()=>{
+        toast.classList.add('hidden');
+        if (closeWindow){
+          try{ window.close(); }catch(e){}
+        }
+      }, ms);
+    }
+  </script>
+</body>
+</html>

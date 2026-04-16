@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Devices</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+  <body class="bg-light">
+    <div id="adminNavbar"></div>
+    <script src="/admin/navbar.js"></script>
+  
+
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h1 class="h4">Dispositivos</h1>
+          <div>
+            <button id="btnNew" class="btn btn-primary">Nuevo dispositivo</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0" id="devicesTable">
+                <thead class="table-light"><tr><th>ID</th><th>Cliente</th><th>Modelo</th><th>Marca</th><th>Serie</th><th class="text-end">Acciones</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toasts -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+      <div id="toastContainer"></div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="deviceModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Dispositivo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <form id="deviceForm">
+            <input type="hidden" id="deviceId">
+            <!-- Campo 'Nombre' eliminado: no se requiere nombre para dispositivos -->
+            <div class="row">
+              <div class="col-12 mb-3 position-relative">
+                <label class="form-label">Cliente</label>
+                <input id="deviceCustomerSearch" class="form-control" placeholder="Buscar por nombre o teléfono" autocomplete="off" />
+                <input id="deviceCustomerId" type="hidden" />
+                <div id="customerSuggestions" class="list-group position-absolute w-100" style="z-index:1200; display:none; max-height:200px; overflow:auto;"></div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3"><label class="form-label">Marca</label>
+                <select id="deviceBrandSelect" class="form-select"><option value="">Seleccionar marca...</option></select>
+              </div>
+              <div class="col-md-6 mb-3"><label class="form-label">Modelo</label>
+                <select id="deviceModelSelect" class="form-select" disabled><option value="">Seleccionar modelo...</option></select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-12 mb-3"><label class="form-label">Serie</label><input id="deviceSerial" class="form-control"></div>
+            </div>
+            <div class="mb-3"><label class="form-label">Notas</label><textarea id="deviceNotes" class="form-control" rows="2"></textarea></div>
+
+            <div class="mb-3">
+              <label class="form-label">Fotos (máx. 4)</label>
+              <div id="existingPhotos" class="mb-2 d-flex gap-2"></div>
+              <input id="deviceFiles" class="form-control" type="file" accept="image/*" multiple />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button id="saveDevice" class="btn btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/admin-utils.js"></script>
+  <script src="/js/admin-nav-active.js"></script>
+  <script>
+    // logout handler
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const lo = document.getElementById('logout');
+      if(lo) lo.addEventListener('click', async ()=>{ localStorage.removeItem('token'); await fetch('/auth.php/logout', { method: 'POST' }); window.location.href = '/admin/login.html'; });
+    });
+
+    const modalEl = document.getElementById('deviceModal');
+    const deviceModal = new bootstrap.Modal(modalEl);
+
+    async function loadDevices(){
+      try{
+        const res = await axios.get('/api/devices.php', { headers: getAuthHeaders() });
+        const tbody = document.querySelector('#devicesTable tbody');
+        tbody.innerHTML = '';
+          (res.data || []).forEach(d => {
+          const include = (typeof d.active === 'undefined') || (d.active==1);
+          if(!include) return;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${d.id}</td><td>${escapeHtml(d.customer_name||d.customer||'')}</td><td>${escapeHtml(d.model||d.model_name||'')}</td><td>${escapeHtml(d.brand||d.brand_name||'')}</td><td>${escapeHtml(d.serial||'')}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><button class="btn btn-sm btn-primary btn-action" data-id="${d.id}">Editar</button><button class="btn btn-sm btn-danger btn-action" data-del="${d.id}">Borrar</button></div></td>`;
+          tbody.appendChild(tr);
+        });
+      }catch(err){ showToast('Error cargando dispositivos','danger'); }
+    }
+
+    document.getElementById('btnNew').addEventListener('click', ()=>{
+      const form = document.getElementById('deviceForm');
+      form.reset();
+      document.getElementById('deviceId').value = '';
+      document.getElementById('existingPhotos').innerHTML = '';
+      const fileInput = document.getElementById('deviceFiles'); if(fileInput) fileInput.value = '';
+      // clear customer search
+      document.getElementById('deviceCustomerSearch').value = '';
+      document.getElementById('deviceCustomerId').value = '';
+      // reset brand/model selects
+      const bsel = document.getElementById('deviceBrandSelect'); if(bsel) bsel.value = '';
+      const msel = document.getElementById('deviceModelSelect'); if(msel){ msel.innerHTML = '<option value="">Seleccionar modelo...</option>'; msel.disabled = true; }
+      hideCustomerSuggestions();
+      deviceModal.show();
+    });
+
+    document.querySelector('#devicesTable').addEventListener('click', async (e)=>{
+      try{
+        if(e.target.dataset.id){
+          const id = e.target.dataset.id;
+          const res = await axios.get('/api/devices.php?id='+id, { headers: getAuthHeaders() });
+          const d = res.data || {};
+          document.getElementById('deviceId').value = d.id || '';
+          document.getElementById('deviceCustomerId').value = d.customer_id || '';
+          // set visible customer search value
+          if (d.customer_id && d.customer_name) {
+            document.getElementById('deviceCustomerSearch').value = d.customer_name + (d.phone ? (' — ' + d.phone) : '');
+          } else {
+            document.getElementById('deviceCustomerSearch').value = '';
+          }
+          document.getElementById('deviceSerial').value = d.serial || '';
+          // select brand/model in selects if possible
+          const bsel = document.getElementById('deviceBrandSelect');
+          const msel = document.getElementById('deviceModelSelect');
+          if(bsel){
+            // try to find option by text matching stored brand
+            let found = false;
+            for(let i=0;i<bsel.options.length;i++){
+              if(bsel.options[i].text === (d.brand||'')) { bsel.selectedIndex = i; found = true; break; }
+            }
+            if(found){
+              // load models for brand id
+              const brandId = bsel.value;
+              if(brandId){
+                try{
+                  const modelsRes = await axios.get('/api/models.php?brand_id='+brandId, { headers: getAuthHeaders() });
+                  msel.innerHTML = '<option value="">Seleccionar modelo...</option>';
+                  (modelsRes.data || []).forEach(m=>{ const opt = document.createElement('option'); opt.value = m.id; opt.text = m.name; msel.appendChild(opt); });
+                  msel.disabled = false;
+                  // select model by text
+                  for(let i=0;i<msel.options.length;i++){ if(msel.options[i].text === (d.model||'')){ msel.selectedIndex = i; break; } }
+                }catch(e){ /* ignore */ }
+              }
+            } else {
+              // brand not in list: clear selects and set text inputs fallback
+              bsel.value = '';
+              msel.innerHTML = '<option value="">Seleccionar modelo...</option>'; msel.disabled = true;
+            }
+          }
+          document.getElementById('deviceNotes').value = d.notes || '';
+          // show existing photos
+          const photosEl = document.getElementById('existingPhotos');
+          photosEl.innerHTML = '';
+          (d.photos || []).forEach(p => {
+            const img = document.createElement('img');
+            const src = (p.filename && p.filename.indexOf('/')===0) ? p.filename : ('/' + (p.filename||''));
+            img.src = src;
+            img.style.width = '72px'; img.style.height = '72px'; img.style.objectFit = 'cover'; img.className = 'rounded border';
+            photosEl.appendChild(img);
+          });
+          deviceModal.show();
+        } else if(e.target.dataset.del){
+          if(confirm('Confirmar borrado')){
+            await axios.delete('/api/devices.php?id='+e.target.dataset.del, { headers: getAuthHeaders() });
+            showToast('Dispositivo borrado','success');
+            loadDevices();
+          }
+        }
+      }catch(err){ showToast('Error en operación','danger'); }
+    });
+
+    document.getElementById('saveDevice').addEventListener('click', async ()=>{
+      const id = document.getElementById('deviceId').value;
+      const brandSelect = document.getElementById('deviceBrandSelect');
+      const modelSelect = document.getElementById('deviceModelSelect');
+      const payload = {
+        customer_id: document.getElementById('deviceCustomerId').value||null,
+        serial: document.getElementById('deviceSerial').value.trim() || null,
+        brand: (brandSelect && brandSelect.selectedIndex>0) ? brandSelect.options[brandSelect.selectedIndex].text : null,
+        model: (modelSelect && modelSelect.selectedIndex>0) ? modelSelect.options[modelSelect.selectedIndex].text : null,
+        brand_id: (brandSelect && brandSelect.value) ? brandSelect.value : null,
+        model_id: (modelSelect && modelSelect.value) ? modelSelect.value : null,
+        notes: document.getElementById('deviceNotes').value.trim() || null,
+      };
+      try{
+        if(id){
+          await axios.put('/api/devices.php?id='+id, payload, { headers: getAuthHeaders() });
+          // upload any selected files for existing device
+          await uploadFilesIfAny(id);
+          showToast('Dispositivo actualizado','success');
+        } else {
+          const res = await axios.post('/api/devices.php', payload, { headers: getAuthHeaders() });
+          const newId = res.data.id;
+          // if files selected, upload
+          await uploadFilesIfAny(newId);
+          showToast('Dispositivo creado','success');
+        }
+        deviceModal.hide();
+        loadDevices();
+      }catch(err){ showToast('Error guardando dispositivo','danger'); }
+    });
+
+    loadDevices();
+    
+    async function uploadFilesIfAny(deviceId){
+      const input = document.getElementById('deviceFiles');
+      if (!input || !input.files || input.files.length === 0) return;
+      // check existing count
+      try{
+        const listRes = await axios.get('/api/devices.php?id='+deviceId, { headers: getAuthHeaders() });
+        const existing = listRes.data.photos || [];
+        const allowed = Math.max(0, 4 - existing.length);
+        if (allowed <= 0) { showToast('Ya existen 4 fotos, no se subirán más','warning'); return; }
+        const form = new FormData();
+        form.append('device_id', deviceId);
+        for(let i=0;i<Math.min(allowed, input.files.length);i++) form.append('files[]', input.files[i]);
+        await axios.post('/api/device_photos.php', form, { headers: Object.assign({'Content-Type': 'multipart/form-data'}, getAuthHeaders()) });
+      }catch(e){ showToast('Error subiendo fotos','danger'); }
+    }
+
+    // Customer autocomplete
+    let custTimer = null;
+    const custInput = document.getElementById('deviceCustomerSearch');
+    const suggBox = document.getElementById('customerSuggestions');
+    function hideCustomerSuggestions(){ suggBox.style.display='none'; suggBox.innerHTML=''; }
+    function showCustomerSuggestions(items){
+      suggBox.innerHTML = '';
+      if(!items || items.length===0){ hideCustomerSuggestions(); return; }
+      items.forEach(it=>{
+        const a = document.createElement('a');
+        a.href = '#'; a.className='list-group-item list-group-item-action';
+        a.textContent = `${it.name} ${it.phone?(' — '+it.phone):''}`;
+        a.dataset.id = it.id;
+        a.addEventListener('click', (ev)=>{ ev.preventDefault(); document.getElementById('deviceCustomerId').value = it.id; document.getElementById('deviceCustomerSearch').value = a.textContent; hideCustomerSuggestions(); });
+        suggBox.appendChild(a);
+      });
+      suggBox.style.display='block';
+    }
+    if(custInput){
+      custInput.addEventListener('input', (e)=>{
+        const v = e.target.value.trim();
+        document.getElementById('deviceCustomerId').value = '';
+        if(custTimer) clearTimeout(custTimer);
+        if(!v){ hideCustomerSuggestions(); return; }
+        custTimer = setTimeout(async ()=>{
+          try{
+            const res = await axios.get('/api/customers.php?q='+encodeURIComponent(v), { headers: getAuthHeaders() });
+            showCustomerSuggestions(res.data || []);
+          }catch(err){ hideCustomerSuggestions(); }
+        }, 300);
+      });
+      // click outside to hide
+      document.addEventListener('click', (ev)=>{ if(!custInput.contains(ev.target) && !suggBox.contains(ev.target)) hideCustomerSuggestions(); });
+    }
+    // load brands for selects
+    async function loadBrands(){
+      try{
+        const res = await axios.get('/api/brands.php', { headers: getAuthHeaders() });
+        const bsel = document.getElementById('deviceBrandSelect');
+        if(!bsel) return;
+        // preserve current selection
+        const cur = bsel.value;
+        bsel.innerHTML = '<option value="">Seleccionar marca...</option>';
+        (res.data || []).forEach(b => { const opt = document.createElement('option'); opt.value = b.id; opt.text = b.name; bsel.appendChild(opt); });
+        if(cur) bsel.value = cur;
+      }catch(e){ /* ignore */ }
+    }
+
+    // on brand change, fetch models
+    const brandSel = document.getElementById('deviceBrandSelect');
+    if(brandSel){
+      brandSel.addEventListener('change', async (e)=>{
+        const bid = e.target.value;
+        const msel = document.getElementById('deviceModelSelect');
+        msel.innerHTML = '<option value="">Seleccionar modelo...</option>';
+        msel.disabled = true;
+        if(!bid) return;
+        try{
+          const res = await axios.get('/api/models.php?brand_id='+bid, { headers: getAuthHeaders() });
+          (res.data || []).forEach(m=>{ const opt = document.createElement('option'); opt.value = m.id; opt.text = m.name; msel.appendChild(opt); });
+          msel.disabled = false;
+        }catch(e){ /* ignore */ }
+      });
+    }
+
+    // initial load
+    loadBrands();
+  </script>
+</body>
+</html>

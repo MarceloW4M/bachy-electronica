@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Stock por Depósito</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h4">Stock por Depósito</h1>
+      <div>
+        <select id="warehouseSelect" class="form-select form-select-sm"></select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="stockTable"><thead class="table-light"><tr><th>ID</th><th>Nombre</th><th>Marca</th><th class="text-end">Acciones</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    const warehouseSelect = document.getElementById('warehouseSelect');
+    const stockTableBody = document.querySelector('#stockTable tbody');
+    function getAuth(){ const t=localStorage.getItem('token'); return t?{Authorization:'Bearer '+t}:{} }
+
+    async function loadWarehouses(){
+      try{
+        const res = await axios.get('/api/warehouses.php?all=1', { headers: getAuth() });
+        warehouseSelect.innerHTML = '';
+        (res.data||[]).forEach(w=>{ const o=document.createElement('option'); o.value=w.id; o.text=w.name; warehouseSelect.appendChild(o); });
+        if(warehouseSelect.options.length) { warehouseSelect.selectedIndex = 0; loadStock(); }
+      }catch(e){ console.error(e); }
+    }
+
+    async function loadStock(){
+      const wid = warehouseSelect.value;
+      if(!wid) return;
+      try{
+        const [itemsRes, stocksRes] = await Promise.all([
+          axios.get('/api/items.php?all=1', { headers: getAuth() }),
+          axios.get('/api/stocks.php?warehouse_id=' + wid, { headers: getAuth() })
+        ]);
+        const items = itemsRes.data || [];
+        const stocks = (stocksRes.data || []).reduce((acc,s)=>{ acc[s.item_id]=s; return acc; }, {});
+        stockTableBody.innerHTML = '';
+        items.forEach(it=>{
+          const include = (typeof it.active === 'undefined') || (it.active==1);
+          if(!include) return;
+          const tr = document.createElement('tr');
+          const qty = stocks[it.id] ? stocks[it.id].quantity : 0;
+          const price = stocks[it.id] ? (stocks[it.id].unit_price_ars || '') : '';
+          const priceLocked = stocks[it.id] && stocks[it.id].unit_price_ars !== null && stocks[it.id].unit_price_ars !== '';
+          const priceDisabledAttr = priceLocked ? 'disabled' : '';
+          const priceTitle = priceLocked ? 'Precio bloqueado en este depósito (editar desde el artículo o usar opción forzar).' : '';
+          tr.innerHTML = `<td>${it.id}</td><td>${escapeHtml(it.name||'')}</td><td>${escapeHtml(it.brand_name||it.brand||'')}</td><td><input type="number" class="form-control form-control-sm price-input" data-item-id="${it.id}" value="${price}" step="0.01" placeholder="Precio ARS" ${priceDisabledAttr} title="${priceTitle}"></td><td class="text-end"><div class="d-flex justify-content-end gap-2"><div class="input-group input-group-sm" style="max-width:140px"><input type="number" class="form-control form-control-sm qty-input" data-item-id="${it.id}" value="${qty}" min="0"></div><button class="btn btn-sm btn-primary btn-action btn-save" data-item-id="${it.id}">Guardar</button></div></td>`;
+          stockTableBody.appendChild(tr);
+        });
+      }catch(e){ console.error(e); }
+    }
+
+    stockTableBody.addEventListener('click', async (e)=>{
+        if(e.target.classList.contains('btn-save')){
+        const itemId = e.target.dataset.itemId;
+        const wid = warehouseSelect.value;
+        const input = document.querySelector('.qty-input[data-item-id="'+itemId+'"]');
+        const qty = parseInt(input.value) || 0;
+        const priceEl = document.querySelector('.price-input[data-item-id="'+itemId+'"]');
+        // only send unit_price when input is enabled (editable). If disabled, price is locked server-side.
+        const price = priceEl && !priceEl.disabled && priceEl.value !== '' ? parseFloat(priceEl.value) : null;
+        // read current usd_rate from server as fallback
+        let usdRate = null;
+        try{ const r = await axios.get('/api/settings.php?key=usd_rate'); usdRate = r.data ? parseFloat(r.data) : null; }catch(e){ usdRate = null; }
+        try{
+          await axios.post('/api/stocks.php', { item_id: itemId, warehouse_id: wid, quantity: qty, unit_price: price, usd_rate: usdRate }, { headers: getAuth() });
+          e.target.classList.add('btn-success'); setTimeout(()=>e.target.classList.remove('btn-success'), 900);
+        }catch(err){ console.error(err); alert('Error guardando stock'); }
+      }
+    });
+
+    function escapeHtml(s){ return (s||'').toString().replace(/[&<>\"']/g, function(a){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]; }); }
+
+    warehouseSelect.addEventListener('change', loadStock);
+    loadWarehouses();
+  </script>
+</body>
+</html>

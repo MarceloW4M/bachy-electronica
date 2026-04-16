@@ -18,6 +18,7 @@
             <h1 class="h4">Reparaciones</h1>
             <div>
               <button id="btnNew" type="button" class="btn btn-primary">Nueva orden de reparación</button>
+              <button id="btnReports" type="button" class="btn btn-outline-secondary ms-2">Informes (Completadas)</button>
             </div>
           </div>
 
@@ -278,10 +279,15 @@
       if(cid) filters.customer_id = cid;
       if(ord) filters.q = ord;
       if(status && status !== '') filters.status = status;
+      // disabling 'Informes' toggle when applying manual filters
       loadRepairs(filters);
+      try{ if(window.reportsFilterActive !== undefined) window.reportsFilterActive = false; }catch(e){}
+      try{ const _br = document.getElementById('btnReports'); if(_br){ _br.classList.remove('btn-secondary'); _br.classList.add('btn-outline-secondary'); _br.textContent='Informes (Completadas)'; } }catch(e){}
     });
     document.getElementById('btnClearFilter').addEventListener('click', ()=>{
       document.getElementById('filterCustomerId').value=''; document.getElementById('filterCustomerSearch').value=''; document.getElementById('filterOrderNumber').value=''; document.getElementById('filterStatus').value=''; hideFilterCustomerSuggestions(); loadRepairs();
+      try{ if(window.reportsFilterActive !== undefined) window.reportsFilterActive = false; }catch(e){}
+      try{ const _br2 = document.getElementById('btnReports'); if(_br2){ _br2.classList.remove('btn-secondary'); _br2.classList.add('btn-outline-secondary'); _br2.textContent='Informes (Completadas)'; } }catch(e){}
     });
 
     // Report modal logic
@@ -454,6 +460,28 @@
     const btnNewEl = document.getElementById('btnNew'); if(btnNewEl) btnNewEl.addEventListener('click', openNewRepair);
     // Delegated fallback: handle clicks if direct listener didn't attach
     document.body.addEventListener('click', (ev)=>{ const t = ev.target; if(!t) return; if(t.id==='btnNew' || (t.closest && t.closest('#btnNew'))){ ev.preventDefault(); openNewRepair(); } });
+
+    // Informes button: toggle showing only completed repairs
+    let reportsFilterActive = false;
+    window.reportsFilterActive = false;
+    const btnReports = document.getElementById('btnReports');
+    if(btnReports){
+      btnReports.addEventListener('click', ()=>{
+        reportsFilterActive = !reportsFilterActive;
+        window.reportsFilterActive = reportsFilterActive;
+        if(reportsFilterActive){
+          btnReports.classList.remove('btn-outline-secondary');
+          btnReports.classList.add('btn-secondary');
+          btnReports.textContent = 'Mostrar Todas';
+          loadRepairs({ status: 'completada' });
+        } else {
+          btnReports.classList.remove('btn-secondary');
+          btnReports.classList.add('btn-outline-secondary');
+          btnReports.textContent = 'Informes (Completadas)';
+          loadRepairs();
+        }
+      });
+    }
 
     document.querySelector('#repairsTable').addEventListener('click', async (e)=>{
       try{

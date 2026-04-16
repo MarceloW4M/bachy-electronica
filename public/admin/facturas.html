@@ -1,0 +1,26 @@
+<!doctype html>
+<body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+      const customerSel = document.getElementById('customerSelect'); customerSel.innerHTML = '<option value="">Sin asignar</option>';
+      customers.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.text=c.name; customerSel.appendChild(o); });
+      const itemSel = document.getElementById('itemSelect'); itemSel.innerHTML = '';
+      items.forEach(i=>{ const o=document.createElement('option'); o.value=i.id; o.text = i.name + ' (' + (i.sku||'') + ')'; itemSel.appendChild(o); });
+      document.getElementById('btnAddItem').addEventListener('click', ()=>{
+        const id = itemSel.value; const sel = items.find(x=>x.id==id); if(!sel) return;
+        const tbody = document.getElementById('invoiceItems'); const tr=document.createElement('tr'); tr.innerHTML = `<td>${sel.name}</td><td><input class="form-control qty" value="1" type="number" min="1"></td><td><input class="form-control price" value="${sel.unit_price||50}" type="number" step="0.01"></td><td><button class="btn btn-sm btn-danger btn-remove">X</button></td>`; tr.dataset.itemId = sel.id; tbody.appendChild(tr);
+      });
+      document.getElementById('invoiceItems').addEventListener('click',(e)=>{ if(e.target.classList.contains('btn-remove')) e.target.closest('tr').remove(); });
+      document.getElementById('btnCreateInvoice').addEventListener('click', async ()=>{
+        const customer_id = document.getElementById('customerSelect').value || null; const rows = Array.from(document.querySelectorAll('#invoiceItems tr'));
+        if(rows.length===0){ alert('Agrega al menos un artículo'); return; }
+        const itemsPayload = rows.map(r=>({ item_id: r.dataset.itemId, quantity: parseInt(r.querySelector('.qty').value)||1, unit_price: parseFloat(r.querySelector('.price').value)||0 }));
+        try{ const res = await axios.post('/api/invoices.php', { customer_id: customer_id, items: itemsPayload }); alert('Factura creada id=' + res.data.id); location.reload(); }catch(e){ alert('Error creando factura'); }
+      });
+      loadInvoicesList();
+    }
+    async function loadInvoicesList(){ try{ const res = await axios.get('/api/invoices.php'); const tbody = document.getElementById('invoicesList'); tbody.innerHTML=''; (res.data||[]).forEach(q=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${q.id}</td><td>${Number(q.total).toFixed(2)}</td><td>${q.created_at}</td>`; tbody.appendChild(tr); }); }catch(e){}}
+    loadInvoiceHelpers();
+  </script>
+</body>
+</html>

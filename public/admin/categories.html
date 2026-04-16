@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Rubros</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+  <body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h4">Rubros</h1>
+      <div><button id="btnNew" class="btn btn-success">Nuevo rubro</button></div>
+    </div>
+    <div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0" id="listTable"><thead class="table-light"><tr><th>ID</th><th>Nombre</th><th class="text-end">Acciones</th></tr></thead><tbody></tbody></table></div></div></div>
+  </div>
+
+  <div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Rubro</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="form"><input type="hidden" id="id"><div class="mb-3"><label class="form-label">Nombre</label><input id="name" class="form-control" required></div><div class="form-check"><input id="active" class="form-check-input" type="checkbox" checked><label class="form-check-label">Activo</label></div></form></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button id="save" class="btn btn-primary">Guardar</button></div></div></div></div>
+
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100"><div id="toastContainer"></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/admin-utils.js"></script>
+  <script src="/js/admin-nav-active.js"></script>
+  <script>
+    const api = '/api/categories.php';
+    const modal = new bootstrap.Modal(document.getElementById('modal'));
+    function getAuth(){ const t=localStorage.getItem('token'); return t?{Authorization:'Bearer '+t}:{} }
+    async function load(){
+      try{
+        const res = await axios.get(api+'?all=1', { headers: getAuth() });
+        const tbody = document.querySelector('#listTable tbody'); tbody.innerHTML = '';
+        (res.data||[]).forEach(r=>{
+          const include = (typeof r.active === 'undefined') || (r.active==1);
+          if(!include) return;
+          const tr = document.createElement('tr');
+          const tdId = document.createElement('td'); tdId.textContent = r.id;
+          const tdName = document.createElement('td'); tdName.innerHTML = escapeHtml(r.name||'');
+          const tdActions = document.createElement('td'); tdActions.className = 'text-end';
+          const wrap = document.createElement('div'); wrap.className = 'd-flex justify-content-end gap-2';
+          const btnEdit = document.createElement('button'); btnEdit.className = 'btn btn-sm btn-primary btn-action btn-edit'; btnEdit.dataset.id = r.id; btnEdit.textContent = 'Editar';
+          const btnDel = document.createElement('button'); btnDel.className = 'btn btn-sm btn-danger btn-action btn-del'; btnDel.dataset.id = r.id; btnDel.textContent = r.active==1 ? 'Desactivar' : 'Eliminar';
+          wrap.appendChild(btnEdit); wrap.appendChild(btnDel); tdActions.appendChild(wrap);
+          tr.appendChild(tdId); tr.appendChild(tdName); tr.appendChild(tdActions);
+          tbody.appendChild(tr);
+        });
+      }catch(e){ showToast('Error cargando rubros','danger'); }
+    }
+    document.getElementById('btnNew').addEventListener('click', ()=>{ document.getElementById('form').reset(); document.getElementById('id').value=''; document.getElementById('active').checked=true; modal.show(); });
+    document.getElementById('save').addEventListener('click', async ()=>{ const id=document.getElementById('id').value||null; const payload={ name: document.getElementById('name').value.trim(), active: document.getElementById('active').checked?1:0 }; if(!payload.name){ showToast('Nombre obligatorio','warning'); return; } try{ if(id) await axios.put(api+'?id='+id, payload, { headers: getAuth() }); else await axios.post(api, payload, { headers: getAuth() }); modal.hide(); load(); showToast('Guardado','success'); }catch(e){ showToast('Error guardando','danger'); } });
+    document.querySelector('#listTable tbody').addEventListener('click', async (e)=>{ const t=e.target; if(t.classList.contains('btn-edit')){ const id=t.dataset.id; try{ const res=await axios.get(api+'?id='+id, { headers: getAuth() }); const d=res.data; document.getElementById('id').value=d.id; document.getElementById('name').value=d.name||''; document.getElementById('active').checked=d.active==1; modal.show(); }catch(e){ showToast('Error'); } } if(t.classList.contains('btn-del')){ const id=t.dataset.id; if(!confirm('Confirmar desactivación?')) return; try{ await axios.delete(api+'?id='+id, { headers: getAuth() }); load(); showToast('Desactivado','success'); }catch(e){ showToast('Error al desactivar','danger'); } } });
+    load();
+  </script>
+  <script>
+    // logout handler (same behavior as dashboard)
+    // logout handled globally in /js/admin-utils.js
+  </script>
+</body>
+</html>

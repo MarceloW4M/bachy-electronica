@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clones aislados</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f1ea;
+        --card: #fffdf8;
+        --text: #1f1f1f;
+        --muted: #5f5a52;
+        --accent: #0d5c63;
+        --border: #d9d0c3;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: linear-gradient(180deg, #ebe4d8 0%, var(--bg) 100%);
+        color: var(--text);
+      }
+
+      main {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 32px 20px;
+      }
+
+      section {
+        width: min(760px, 100%);
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 28px;
+        box-shadow: 0 18px 48px rgba(55, 40, 10, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+
+      p {
+        margin: 0 0 14px;
+        line-height: 1.55;
+        color: var(--muted);
+      }
+
+      a.primary {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 12px 18px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: #efe8dd;
+        color: #3c352d;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>Clon aislado publicado</h1>
+        <p>
+          Se publico una copia estatica de bachyelectronica.com.ar dentro de una carpeta separada del sistema principal.
+        </p>
+        <p>
+          Ruta publicada: <code>/isolated/bachyelectronica-clone/</code>
+        </p>
+        <p>
+          La estructura original del mirror permanece separada y esta version no toca las pantallas administrativas ni las APIs del proyecto.
+        </p>
+        <a class="primary" href="./bachyelectronica-clone/">Abrir clon</a>
+      </section>
+    </main>
+  </body>
+</html>

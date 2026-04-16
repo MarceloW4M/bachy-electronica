@@ -1,0 +1,22 @@
+{
+  "name": "bachy-db-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Servidor MCP para consultar y operar la base de datos de Bachy TW desde n8n u otros clientes MCP.",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test tests/smoke.test.js",
+    "smoke:mcp": "node scripts/smoke-client.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "mysql2": "^3.21.0"
+  }
+}

@@ -8,59 +8,75 @@
   <link href="/css/admin.css" rel="stylesheet">
 </head>
 <body class="bg-light">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-    <div class="container-fluid">
-      <a class="navbar-brand" href="/admin/dashboard.html">Admin</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain" aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navMain">
-        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="stockDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Stock</a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="stockDropdown">
-              <li><a class="dropdown-item" href="/admin/brands.html">Marcas</a></li>
-              <li><a class="dropdown-item" href="/admin/models.html">Modelos</a></li>
-              <li><a class="dropdown-item" href="/admin/categories.html">Rubros</a></li>
-              <li><a class="dropdown-item" href="/admin/items.html">Artículos</a></li>
-              <li><a class="dropdown-item" href="/admin/warehouses.html">Depósitos</a></li>
-              <li><a class="dropdown-item" href="/admin/suppliers.html">Proveedores</a></li>
-            </ul>
-          </li>
-          <li class="nav-item"><a class="nav-link" href="/admin/dashboard.html">Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" href="/admin/clients.html">Clientes</a></li>
-          <li class="nav-item"><a class="nav-link" href="/admin/devices.html">Dispositivos</a></li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="repairsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Reparaciones</a>
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="repairsDropdown">
-              <li><a class="dropdown-item" href="/admin/repairs.html">Lista de reparaciones</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="/admin/technicians.html">Técnicos</a></li>
-            </ul>
-          </li>
-          <li class="nav-item"><button id="logout" class="btn btn-outline-light btn-sm ms-3">Cerrar sesión</button></li>
-        </ul>
-      </div>
-    </div>
-  </nav>
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
 
   <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h1 class="h4">Artículos</h1>
-      <div><button id="btnNew" class="btn btn-success">Nuevo artículo</button></div>
+      <div class="d-flex align-items-center gap-2">
+        <button id="btnNew" class="btn btn-success">Nuevo artículo</button>
+      </div>
     </div>
     <div class="card">
       <div class="card-body p-0">
         <div class="table-responsive">
           <table class="table table-hover mb-0" id="listTable">
             <thead class="table-light">
-              <tr><th>ID</th><th>Nombre</th><th>SKU</th><th>Rubro</th><th>Activo</th><th>Acciones</th></tr>
+              <tr><th>ID</th><th>Nombre</th><th>Marca</th><th>Modelo</th><th>Rubro</th><th class="text-end">Acciones</th></tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Brand quick-add modal -->
+  <div class="modal fade" id="brandModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Marca</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="brandForm">
+            <input type="hidden" id="brand_id">
+            <div class="mb-3"><label class="form-label">Nombre</label><input id="brand_name" class="form-control" required></div>
+            <div class="form-check"><input id="brand_active" class="form-check-input" type="checkbox" checked><label class="form-check-label">Activo</label></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button id="brandSave" class="btn btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+        <!-- Model quick-add modal -->
+        <div class="modal fade" id="modelModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Modelo</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <form id="modelForm">
+                  <input type="hidden" id="model_id">
+                  <div class="mb-3"><label class="form-label">Marca</label><select id="model_brand_id" class="form-select"><option value="">Seleccionar...</option></select></div>
+                  <div class="mb-3"><label class="form-label">Nombre</label><input id="model_name" class="form-control" required></div>
+                  <div class="form-check"><input id="model_active" class="form-check-input" type="checkbox" checked><label class="form-check-label">Activo</label></div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button id="modelSave" class="btn btn-primary">Guardar</button>
+              </div>
+            </div>
+          </div>
+        </div>
   </div>
 
   <div class="modal fade" id="modal" tabindex="-1">
@@ -75,7 +91,40 @@
             <input type="hidden" id="id">
             <div class="mb-3"><label class="form-label">Nombre</label><input id="name" class="form-control" required></div>
             <div class="mb-3"><label class="form-label">SKU</label><input id="sku" class="form-control"></div>
+            <div class="mb-3">
+              <label class="form-label">Marca</label>
+              <div class="d-flex gap-2">
+                <select id="brandId" class="form-select"><option value="">Sin asignar</option></select>
+                <button type="button" id="btnAddBrand" class="btn btn-outline-secondary btn-sm" title="Agregar marca">+</button>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Modelo</label>
+              <div class="d-flex gap-2">
+                <select id="modelId" class="form-select"><option value="">Sin asignar</option></select>
+                <button type="button" id="btnAddModel" class="btn btn-outline-secondary btn-sm" title="Agregar modelo">+</button>
+              </div>
+            </div>
             <div class="mb-3"><label class="form-label">Rubro</label><select id="categoryId" class="form-select"><option value="">Sin asignar</option></select></div>
+            <div class="mb-3"><label class="form-label">Código (barra/QR)</label><input id="barcode" class="form-control"></div>
+            <div class="mb-3"><label class="form-label">Código QR (opcional)</label><input id="qr_code" class="form-control"></div>
+            <div class="mb-3">
+              <label class="form-label">Precio unitario</label>
+              <div class="d-flex gap-2">
+                <div style="flex:1">
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input id="unit_price" type="number" step="0.01" class="form-control" value="50.00">
+                  </div>
+                </div>
+                  <div style="flex:1">
+                  <div class="input-group">
+                    <span class="input-group-text">USD</span>
+                    <input id="unit_price_usd" type="number" step="0.01" class="form-control" value="50.00">
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="form-check"><input id="active" class="form-check-input" type="checkbox" checked><label class="form-check-label">Activo</label></div>
           </form>
         </div>
@@ -95,6 +144,17 @@
   <script>
     const api = '/api/items.php';
     const modal = new bootstrap.Modal(document.getElementById('modal'));
+    // cache for usd rate
+    let cachedUsdRate = null;
+    async function getUsdRate(){
+      if(cachedUsdRate!==null) return cachedUsdRate;
+      try{
+        const res = await axios.get('/api/settings.php?key=usd_rate');
+        if(res && typeof res.data !== 'undefined' && res.data !== null){ cachedUsdRate = parseFloat(res.data) || 1; return cachedUsdRate; }
+      }catch(e){ }
+      const stored = localStorage.getItem('usd_rate'); if(stored) { cachedUsdRate = parseFloat(stored) || 1; return cachedUsdRate; }
+      cachedUsdRate = 1; return cachedUsdRate;
+    }
 
     function getAuth(){
       const token = localStorage.getItem('token');
@@ -104,11 +164,23 @@
     async function load(){
       try{
         const res = await axios.get(api + '?all=1', { headers: getAuth() });
-        const tbody = document.querySelector('#listTable tbody');
-        tbody.innerHTML = '';
+        const tbody = document.querySelector('#listTable tbody'); tbody.innerHTML = '';
         (res.data || []).forEach(r => {
+          const include = (typeof r.active === 'undefined') || (r.active==1);
+          if(!include) return;
           const tr = document.createElement('tr');
-          tr.innerHTML = `<td>${r.id}</td><td>${escapeHtml(r.name || '')}</td><td>${escapeHtml(r.sku || '')}</td><td>${escapeHtml(r.category_name||'')}</td><td>${r.active == 1 ? '<span class="badge bg-success">Sí</span>' : '<span class="badge bg-secondary">No</span>'}</td><td><button class="btn btn-sm btn-primary btn-edit" data-id="${r.id}">Editar</button> <button class="btn btn-sm btn-danger btn-del" data-id="${r.id}">${r.active == 1 ? 'Desactivar' : 'Eliminar'}</button></td>`;
+          const tdId = document.createElement('td'); tdId.textContent = r.id;
+          const tdName = document.createElement('td'); tdName.innerHTML = escapeHtml(r.name || '');
+          const tdBrand = document.createElement('td'); tdBrand.innerHTML = escapeHtml(r.brand_name || '');
+          const tdModel = document.createElement('td'); tdModel.innerHTML = escapeHtml(r.model_name || '');
+          const tdCategory = document.createElement('td'); tdCategory.innerHTML = escapeHtml(r.category_name || '');
+          // prices intentionally hidden in list view per UI requirement
+          const tdActions = document.createElement('td'); tdActions.className = 'text-end';
+          const wrap = document.createElement('div'); wrap.className = 'd-flex justify-content-end gap-2';
+          const btnEdit = document.createElement('button'); btnEdit.className = 'btn btn-sm btn-primary btn-action btn-edit'; btnEdit.dataset.id = r.id; btnEdit.textContent = 'Editar';
+          const btnDel = document.createElement('button'); btnDel.className = 'btn btn-sm btn-danger btn-action btn-del'; btnDel.dataset.id = r.id; btnDel.textContent = r.active == 1 ? 'Desactivar' : 'Eliminar';
+          wrap.appendChild(btnEdit); wrap.appendChild(btnDel); tdActions.appendChild(wrap);
+          tr.appendChild(tdId); tr.appendChild(tdName); tr.appendChild(tdBrand); tr.appendChild(tdModel); tr.appendChild(tdCategory); tr.appendChild(tdActions);
           tbody.appendChild(tr);
         });
       }catch(e){
@@ -121,6 +193,7 @@
       document.getElementById('id').value = '';
       document.getElementById('active').checked = true;
       loadCategories();
+      loadBrands();
       modal.show();
     });
 
@@ -129,7 +202,12 @@
       const payload = {
         name: document.getElementById('name').value.trim(),
         sku: document.getElementById('sku').value.trim(),
+        brand_id: document.getElementById('brandId').value || null,
+        model_id: document.getElementById('modelId').value || null,
         category_id: document.getElementById('categoryId').value || null,
+        barcode: document.getElementById('barcode').value.trim() || null,
+        qr_code: document.getElementById('qr_code').value.trim() || null,
+        unit_price: (function(){ const v = parseFloat(document.getElementById('unit_price').value) || 0; return Math.round((v+Number.EPSILON)*100)/100; })(),
         active: document.getElementById('active').checked ? 1 : 0
       };
 
@@ -139,13 +217,22 @@
       }
 
       try{
-        if(id) await axios.put(api + '?id=' + id, payload, { headers: getAuth() });
-        else await axios.post(api, payload, { headers: getAuth() });
-        modal.hide();
-        load();
-        showToast('Guardado', 'success');
+        if(id) {
+          const res = await axios.put(api + '?id=' + id, payload, { headers: getAuth() });
+          modal.hide();
+          load();
+          const sku = res && res.data && res.data.sku ? res.data.sku : null;
+          showToast('Actualizado' + (sku ? ' — SKU: ' + sku : ''), 'success');
+        } else {
+          const res = await axios.post(api, payload, { headers: getAuth() });
+          modal.hide();
+          load();
+          const sku = res.data && res.data.sku ? res.data.sku : null;
+          showToast('Creado' + (sku ? ' — SKU: ' + sku : ''), 'success');
+        }
       }catch(e){
-        showToast('Error guardando', 'danger');
+        const msg = e && e.response && e.response.data && e.response.data.error ? e.response.data.error : 'Error guardando';
+        showToast(msg, 'danger');
       }
     });
 
@@ -160,8 +247,25 @@
           document.getElementById('id').value = d.id;
           document.getElementById('name').value = d.name || '';
           document.getElementById('sku').value = d.sku || '';
+          document.getElementById('barcode').value = d.barcode || '';
+          document.getElementById('qr_code').value = d.qr_code || '';
+          if (d.unit_price !== null && typeof d.unit_price !== 'undefined') {
+            document.getElementById('unit_price').value = parseFloat(d.unit_price).toFixed(2);
+            // compute USD equivalent and set field (rate from system settings)
+            const curRate = await getUsdRate();
+            const curArs = parseFloat(d.unit_price) || 0;
+            if (unitPriceUsdEl) unitPriceUsdEl.value = (curRate > 0) ? (Math.round((curArs/curRate + Number.EPSILON)*100)/100).toFixed(2) : '0.00';
+          } else {
+            // default both to 50.00 when no unit price is present
+            document.getElementById('unit_price').value = '50.00';
+            if (unitPriceUsdEl) unitPriceUsdEl.value = '50.00';
+          }
           document.getElementById('active').checked = d.active == 1;
           await loadCategories();
+          await loadBrands();
+          document.getElementById('brandId').value = d.brand_id || '';
+          await loadModels(d.brand_id);
+          document.getElementById('modelId').value = d.model_id || '';
           document.getElementById('categoryId').value = d.category_id || '';
           modal.show();
         }catch(e){
@@ -195,6 +299,175 @@
       }catch(e){ }
     }
     loadCategories();
+    async function loadBrands(){
+      try{
+        const res = await axios.get('/api/brands.php?all=1', { headers: getAuth() });
+        const sel = document.getElementById('brandId');
+        if(!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">Sin asignar</option>';
+        (res.data||[]).forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.text=b.name; sel.appendChild(o); });
+        if(cur) sel.value = cur;
+      }catch(e){ }
+    }
+
+    async function loadModels(brandId){
+      try{
+        const sel = document.getElementById('modelId');
+        if(!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">Sin asignar</option>';
+        let url = '/api/models.php?all=1';
+        if(brandId) url = '/api/models.php?brand_id=' + brandId;
+        const res = await axios.get(url, { headers: getAuth() });
+        (res.data||[]).forEach(m=>{ const o=document.createElement('option'); o.value=m.id; o.text=m.name; sel.appendChild(o); });
+        if(cur) sel.value = cur;
+      }catch(e){ }
+    }
+
+    document.getElementById('brandId').addEventListener('change', (e)=>{ loadModels(e.target.value); });
+
+    // Brand quick-add handlers
+    const brandModal = new bootstrap.Modal(document.getElementById('brandModal'));
+    document.getElementById('btnAddBrand').addEventListener('click', ()=>{
+      document.getElementById('brandForm').reset();
+      document.getElementById('brand_id').value='';
+      document.getElementById('brand_active').checked = true;
+      // ensure the item modal is underneath and brand modal stacks on top
+      try{
+        const itemModalEl = document.getElementById('modal');
+        if(itemModalEl) itemModalEl.style.zIndex = 1040; // lower underlying modal
+      }catch(e){}
+      brandModal.show();
+    });
+    document.getElementById('brandSave').addEventListener('click', async ()=>{
+      const name = document.getElementById('brand_name').value.trim();
+      const active = document.getElementById('brand_active').checked ? 1 : 0;
+      if(!name){ showToast('Nombre de marca obligatorio','warning'); return; }
+      try{
+        const res = await axios.post('/api/brands.php', { name, active }, { headers: getAuth() });
+        brandModal.hide();
+        await loadBrands();
+        // try to select the newly created brand if API returned it
+        try{ if(res && res.data && res.data.id) document.getElementById('brandId').value = res.data.id; }catch(e){}
+        showToast('Marca creada','success');
+      }catch(e){ const msg = e && e.response && e.response.data && e.response.data.error ? e.response.data.error : 'Error creando marca'; showToast(msg,'danger'); }
+    });
+
+    // Adjust z-index after brand modal shown so it appears above the item modal
+    const brandEl = document.getElementById('brandModal');
+    brandEl.addEventListener('shown.bs.modal', ()=>{
+      try{
+        // topmost backdrop should be above the item modal
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if(backdrops.length){ backdrops[backdrops.length-1].style.zIndex = 1050; }
+        brandEl.style.zIndex = 1060;
+      }catch(e){}
+    });
+    brandEl.addEventListener('hidden.bs.modal', ()=>{
+      try{
+        // restore underlying item modal z-index
+        const itemModalEl = document.getElementById('modal');
+        if(itemModalEl) itemModalEl.style.zIndex = '';
+        // cleanup backdrop inline styles if left behind
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if(backdrops.length){ backdrops[backdrops.length-1].style.zIndex = ''; }
+        brandEl.style.zIndex = '';
+      }catch(e){}
+    });
+
+    // Model quick-add handlers
+    const modelModalQuick = new bootstrap.Modal(document.getElementById('modelModal'));
+    document.getElementById('btnAddModel').addEventListener('click', async ()=>{
+      document.getElementById('modelForm').reset();
+      document.getElementById('model_id').value='';
+      document.getElementById('model_active').checked = true;
+      // load brands into model modal and preselect current brand if present
+      await loadBrands();
+      try{ const sel = document.getElementById('model_brand_id'); if(sel){ sel.innerHTML = '<option value="">Seleccionar...</option>'; const brands = (await axios.get('/api/brands.php?all=1', { headers: getAuth() })).data||[]; brands.forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.text=b.name; sel.appendChild(o); }); const curBrand = document.getElementById('brandId') ? document.getElementById('brandId').value : ''; if(curBrand) sel.value = curBrand; } }catch(e){}
+      // ensure item modal underneath
+      try{ const itemModalEl = document.getElementById('modal'); if(itemModalEl) itemModalEl.style.zIndex = 1040; }catch(e){}
+      // move model modal to body to avoid nesting/z-index issues, then show
+      try{
+        const mEl = document.getElementById('modelModal');
+        if(mEl && mEl.parentElement !== document.body) document.body.appendChild(mEl);
+      }catch(e){}
+      modelModalQuick.show();
+    });
+
+    document.getElementById('modelSave').addEventListener('click', async ()=>{
+      const name = document.getElementById('model_name').value.trim();
+      const brand_id = document.getElementById('model_brand_id').value || document.getElementById('brandId').value || null;
+      const active = document.getElementById('model_active').checked ? 1 : 0;
+      if(!name || !brand_id){ showToast('Marca y nombre obligatorios','warning'); return; }
+      try{
+        const res = await axios.post('/api/models.php', { brand_id, name, active }, { headers: getAuth() });
+        modelModalQuick.hide();
+        await loadModels(brand_id);
+        try{ if(res && res.data && res.data.id) document.getElementById('modelId').value = res.data.id; }
+        catch(e){}
+        showToast('Modelo creado','success');
+      }catch(e){ const msg = e && e.response && e.response.data && e.response.data.error ? e.response.data.error : 'Error creando modelo'; showToast(msg,'danger'); }
+    });
+
+    const modelEl = document.getElementById('modelModal');
+    modelEl.addEventListener('shown.bs.modal', ()=>{
+      try{
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if(backdrops.length){ backdrops[backdrops.length-1].style.zIndex = 1070; }
+        modelEl.style.zIndex = 1080;
+      }catch(e){}
+    });
+    modelEl.addEventListener('hidden.bs.modal', ()=>{
+      try{
+        const itemModalEl = document.getElementById('modal'); if(itemModalEl) itemModalEl.style.zIndex = '';
+        const backdrops = document.querySelectorAll('.modal-backdrop'); if(backdrops.length){ backdrops[backdrops.length-1].style.zIndex = ''; }
+        modelEl.style.zIndex = '';
+      }catch(e){}
+    });
+
+    // USD conversion helpers
+    const unitPriceEl = document.getElementById('unit_price');
+    const unitPriceUsdEl = document.getElementById('unit_price_usd');
+    function round2(v){ return Math.round((v + Number.EPSILON) * 100) / 100; }
+
+    async function updatePriceUsdLabel(){
+      const lbl = document.getElementById('priceUsdLabel');
+      const unitEl = unitPriceEl;
+      if(!unitEl) return;
+      const rate = await getUsdRate();
+      const ars = parseFloat(unitEl.value) || 0;
+      const usd = rate > 0 ? (ars / rate) : 0;
+      if(unitPriceUsdEl) unitPriceUsdEl.value = round2(usd).toFixed(2);
+    }
+
+    if(unitPriceEl){
+      unitPriceEl.addEventListener('input', async ()=>{
+        const rate = await getUsdRate();
+        const ars = parseFloat(unitPriceEl.value) || 0;
+        const usd = rate > 0 ? (ars / rate) : 0;
+        if(unitPriceUsdEl) unitPriceUsdEl.value = round2(usd).toFixed(2);
+      });
+    }
+    if(unitPriceUsdEl){
+      unitPriceUsdEl.addEventListener('input', async ()=>{
+        const rate = await getUsdRate();
+        const usd = parseFloat(unitPriceUsdEl.value) || 0;
+        const ars = rate * usd;
+        if(unitPriceEl) unitPriceEl.value = round2(ars).toFixed(2);
+      });
+    }
+    // update when modal shows (only compute USD if USD field is empty/zero)
+    document.getElementById('modal').addEventListener('shown.bs.modal', async ()=>{
+      if(unitPriceEl && unitPriceUsdEl){
+        if (unitPriceUsdEl.value === '' || unitPriceUsdEl.value === '0' || unitPriceUsdEl.value === '0.00') {
+          const rate = await getUsdRate();
+          const ars = parseFloat(unitPriceEl.value) || 0;
+          const usd = rate > 0 ? (ars / rate) : 0;
+          unitPriceUsdEl.value = round2(usd).toFixed(2);
+        }
+      }
+    });
   </script>
 </body>
 </html>

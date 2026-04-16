@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Agenda</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h4">Agenda - Reparaciones</h1>
+      <div><button id="btnNewRepair" class="btn btn-success">Nuevo</button></div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div id="calendar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal evento -->
+  <div class="modal fade" id="eventModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Detalle</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="eventBody"></div><div class="modal-footer"><a id="openRepairLink" class="btn btn-primary">Abrir reparación</a><button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/vendor/fullcalendar/index.global.min.js"></script>
+  <script src="/js/admin-utils.js"></script>
+  <script>
+    const calendarEl = document.getElementById('calendar');
+
+    function initCalendar(){
+      const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        locale: 'es',
+        firstDay: 1,
+        initialView: 'dayGridMonth',
+        buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Agenda' },
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+        height: 'auto',
+        nowIndicator: true,
+        themeSystem: 'bootstrap',
+        editable: true,
+        selectable: true,
+        eventStartEditable: true,
+        eventDurationEditable: true,
+        eventClick: function(info){
+          const ev = info.event;
+          const body = document.getElementById('eventBody');
+          body.textContent = ev.title + '\n' + (ev.extendedProps.status?('Estado: '+ev.extendedProps.status):'');
+          const link = document.getElementById('openRepairLink');
+          link.href = '/admin/repairs.html?id=' + ev.id;
+          const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+          modal.show();
+        },
+        // when an event is dragged to a new date/time
+        eventDrop: function(info){
+          const ev = info.event;
+          const newStart = formatDateToSQL(ev.start, ev.allDay);
+          axios.put('/api/repairs.php?id='+ev.id, { scheduled_at: newStart }, { headers: getAuthHeaders ? getAuthHeaders() : {} })
+            .then(()=>{ showToast('Reparación reprogramada','success'); calendar.refetchEvents(); })
+            .catch(err=>{ showToast('Error reprogramando reparación','danger'); info.revert(); });
+        },
+        // when an event duration is resized
+        eventResize: function(info){
+          const ev = info.event;
+          const newStart = formatDateToSQL(ev.start, ev.allDay);
+          axios.put('/api/repairs.php?id='+ev.id, { scheduled_at: newStart }, { headers: getAuthHeaders ? getAuthHeaders() : {} })
+            .then(()=>{ showToast('Reparación actualizada','success'); calendar.refetchEvents(); })
+            .catch(err=>{ showToast('Error actualizando reparación','danger'); info.revert(); });
+        },
+        events: function(fetchInfo, successCallback, failureCallback){
+          axios.get('/api/repairs.php?calendar=1').then(r=>{
+            const rootStyles = getComputedStyle(document.documentElement);
+            const primary = rootStyles.getPropertyValue('--primary')?.trim() || '#0d6efd';
+            const muted = rootStyles.getPropertyValue('--muted')?.trim() || '#6c757d';
+            // status color mapping
+            const statusColors = {
+              'received': '#ffc107', // warning (amarillo)
+              'en reparacion': primary, // azul principal
+              'pending': muted, // gris
+              'done': '#198754' // success (verde)
+            };
+            const events = (r.data || []).map(ev => {
+              const s = (ev.status || '').toLowerCase();
+              const color = statusColors[s] || primary;
+              return Object.assign({}, ev, { backgroundColor: color, borderColor: color });
+            });
+            successCallback(events);
+          }).catch(e=>{ failureCallback(e); });
+        }
+      });
+      calendar.render();
+
+      document.getElementById('btnNewRepair').addEventListener('click', ()=>{ window.location = '/admin/repairs.html'; });
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      if(typeof FullCalendar === 'undefined'){
+        showToast('No se pudo cargar el calendario local','danger');
+        return;
+      }
+      try{ initCalendar(); }catch(e){ console.error('Error inicializando calendario', e); showToast('No se pudo inicializar el calendario','danger'); }
+    });
+
+    // helper to format Date to MySQL datetime string
+    function formatDateToSQL(d, allDay){
+      if(!d) return null;
+      const year = d.getFullYear();
+      const month = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      let hours = String(d.getHours()).padStart(2,'0');
+      let mins = String(d.getMinutes()).padStart(2,'0');
+      if(allDay){ hours = '09'; mins = '00'; }
+      return `${year}-${month}-${day} ${hours}:${mins}:00`;
+    }
+  </script>
+</body>
+</html>

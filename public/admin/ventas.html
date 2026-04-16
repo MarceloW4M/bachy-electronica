@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Ventas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+  <div class="container">
+    <h1 class="h4 mb-3">Ventas</h1>
+    <div class="card mb-3"><div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label">Cliente</label><select id="customerSelect" class="form-select"><option value="">Sin asignar</option></select></div>
+        <div class="col-md-3"><label class="form-label">Depósito</label><select id="warehouseSelect" class="form-select"><option value="">Sin asignar</option></select></div>
+        <div class="col-md-4"><label class="form-label">Agregar artículo</label><select id="itemSelect" class="form-select"></select></div>
+        <div class="col-md-2"><button id="btnAddItem" class="btn btn-primary">Agregar</button></div>
+      </div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <table class="table"><thead><tr><th>Artículo</th><th>Cant</th><th>Precio</th><th></th></tr></thead><tbody id="saleItems"></tbody></table>
+      <div class="d-flex justify-content-end"><button id="btnCreateSale" class="btn btn-success">Crear Venta</button></div>
+    </div></div>
+    <div class="card mt-3"><div class="card-body">
+      <h5>Ventas recientes</h5>
+      <table class="table"><thead><tr><th>ID</th><th>Nombre</th><th>Marca</th><th class="text-end">Acciones</th></tr></thead><tbody id="salesList"></tbody></table>
+    </div></div>
+  </div>
+</body>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    async function loadSaleHelpers(){
+      const customers = (await axios.get('/api/customers.php?all=1')).data || [];
+      const items = (await axios.get('/api/items.php?all=1')).data || [];
+      const warehouses = (await axios.get('/api/warehouses.php?all=1')).data || [];
+      const customerSel = document.getElementById('customerSelect'); customerSel.innerHTML = '<option value="">Sin asignar</option>';
+      customers.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.text=c.name; customerSel.appendChild(o); });
+      const itemSel = document.getElementById('itemSelect'); itemSel.innerHTML = '';
+      const whSel = document.getElementById('warehouseSelect'); whSel.innerHTML = '<option value="">Sin asignar</option>';
+      warehouses.forEach(w=>{ const o=document.createElement('option'); o.value=w.id; o.text=w.name; whSel.appendChild(o); });
+      items.forEach(i=>{ const o=document.createElement('option'); o.value=i.id; o.text = i.name + ' (' + (i.sku||'') + ')'; itemSel.appendChild(o); });
+      document.getElementById('btnAddItem').addEventListener('click', ()=>{
+        const id = itemSel.value; const sel = items.find(x=>x.id==id); if(!sel) return;
+        const tbody = document.getElementById('saleItems'); const tr=document.createElement('tr'); tr.innerHTML = `<td>${sel.name}</td><td><input class="form-control qty" value="1" type="number" min="1"></td><td><input class="form-control price" value="${sel.unit_price||50}" type="number" step="0.01"></td><td><button class="btn btn-sm btn-danger btn-remove">X</button></td>`; tr.dataset.itemId = sel.id; tbody.appendChild(tr);
+      });
+      document.getElementById('saleItems').addEventListener('click',(e)=>{ if(e.target.classList.contains('btn-remove')) e.target.closest('tr').remove(); });
+      document.getElementById('btnCreateSale').addEventListener('click', async ()=>{
+        const customer_id = document.getElementById('customerSelect').value || null;
+        const warehouse_id = document.getElementById('warehouseSelect').value || null;
+        const rows = Array.from(document.querySelectorAll('#saleItems tr'));
+        if(rows.length===0){ alert('Agrega al menos un artículo'); return; }
+        const itemsPayload = rows.map(r=>({ item_id: r.dataset.itemId, quantity: parseInt(r.querySelector('.qty').value)||1, unit_price: parseFloat(r.querySelector('.price').value)||0 }));
+        try{ const res = await axios.post('/api/sales.php', { customer_id: customer_id, warehouse_id: warehouse_id, items: itemsPayload }); alert('Venta creada id=' + res.data.id); location.reload(); }catch(e){ alert('Error creando venta'); }
+      });
+    }
+    loadSaleHelpers();
+  </script>
+  <script>
+    async function loadSalesList(){
+      const res = await axios.get('/api/sales.php');
+      const tbody = document.getElementById('salesList'); tbody.innerHTML = '';
+      (res.data||[]).forEach(s=>{ const tr=document.createElement('tr'); const name = escapeHtml(s.customer_name || s.customer || ''); const brand = escapeHtml(s.brand_name || ''); tr.innerHTML = `<td>${s.id}</td><td>${name}</td><td>${brand}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><a class="btn btn-sm btn-primary btn-action" href="/admin/ventas.html?id=${s.id}">Ver</a></div></td>`; tbody.appendChild(tr); });
+    }
+    loadSalesList();
+  </script>
+</html>

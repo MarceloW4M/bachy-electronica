@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Modelos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+  <body class="bg-light">
+  <div id="adminNavbar"></div>
+  <script src="/admin/navbar.js"></script>
+
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h4">Modelos</h1>
+      <div><button id="btnNew" class="btn btn-success">Nuevo modelo</button></div>
+    </div>
+    <div class="mb-3">
+      <div class="row g-2">
+        <div class="col-auto">
+          <select id="filterBrand" class="form-select" style="min-width:200px"><option value="">Todas las marcas</option></select>
+        </div>
+        <div class="col">
+          <input id="filterQ" class="form-control" placeholder="Buscar por nombre, código de barra o QR...">
+        </div>
+        <div class="col-auto d-flex gap-2">
+          <button id="btnFilter" class="btn btn-outline-primary">Filtrar</button>
+          <button id="btnClear" class="btn btn-outline-secondary">Limpiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="card"><div class="card-body p-0"><div class="table-responsive table-scroll"><table class="table table-hover mb-0" id="listTable"><thead class="table-light"><tr><th>ID</th><th>Nombre</th><th>Marca</th><th class="text-end">Acciones</th></tr></thead><tbody></tbody></table></div></div></div>
+  </div>
+
+  <div class="modal fade" id="modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Modelo</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form id="form"><input type="hidden" id="id"><div class="mb-3"><label class="form-label">Marca</label><select id="brandId" class="form-select"></select></div><div class="mb-3"><label class="form-label">Nombre</label><input id="name" class="form-control" required></div><div class="form-check"><input id="active" class="form-check-input" type="checkbox" checked><label class="form-check-label">Activo</label></div></form></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button id="save" class="btn btn-primary">Guardar</button></div></div></div></div>
+
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100"><div id="toastContainer"></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/admin-utils.js"></script>
+  <script src="/js/admin-nav-active.js"></script>
+  <script>
+    const api = '/api/models.php';
+    const brandsApi = '/api/brands.php';
+    const modal = new bootstrap.Modal(document.getElementById('modal'));
+    function getAuth(){ const t=localStorage.getItem('token'); return t?{Authorization:'Bearer '+t}:{} }
+
+    async function loadBrands(targetId='brandId'){ try{ const res = await axios.get(brandsApi + '?all=1', { headers: getAuth() }); const sel = document.getElementById(targetId); if(!sel) return; sel.innerHTML = '<option value="">' + (targetId==='brandId' ? 'Seleccionar...' : 'Todas las marcas') + '</option>'; (res.data||[]).forEach(b=>{ const o=document.createElement('option'); o.value=b.id; o.text=b.name; sel.appendChild(o); }); }catch(e){}
+    }
+
+    async function load(filters={}){ try{ const res = await axios.get(api + '?all=1', { headers: getAuth() }); const tbody = document.querySelector('#listTable tbody'); tbody.innerHTML=''; let list = res.data||[];
+      if(filters.brandId){ list = list.filter(r=> String(r.brand_id||r.brandId||'') === String(filters.brandId)); }
+      if(filters.q){ const q = String(filters.q||'').toLowerCase(); list = list.filter(r=> (((r.name||'') + ' ' + (r.sku||'') + ' ' + (r.barcode||'') + ' ' + (r.qr_code||'') + ' ' + (r.id||'')).toLowerCase().includes(q)) ); }
+      list.filter(r=>r.active==1).forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML = `<td>${r.id}</td><td>${escapeHtml(r.name||'')}</td><td>${escapeHtml(r.brand_name||'')}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><button class="btn btn-sm btn-primary btn-action btn-edit" data-id="${r.id}">Editar</button><button class="btn btn-sm btn-danger btn-action btn-del" data-id="${r.id}">${r.active==1?'Desactivar':'Eliminar'}</button></div></td>`; tbody.appendChild(tr); }); }catch(e){ showToast('Error cargando modelos','danger'); } }
+
+    document.getElementById('btnNew').addEventListener('click', async ()=>{ document.getElementById('form').reset(); document.getElementById('id').value=''; await loadBrands(); document.getElementById('active').checked=true; modal.show(); });
+    document.getElementById('save').addEventListener('click', async ()=>{ const id=document.getElementById('id').value||null; const payload={ brand_id: document.getElementById('brandId').value||null, name: document.getElementById('name').value.trim(), active: document.getElementById('active').checked?1:0 }; if(!payload.name || !payload.brand_id){ showToast('Marca y nombre obligatorios','warning'); return; } try{ if(id) await axios.put(api + '?id=' + id, payload, { headers: getAuth() }); else await axios.post(api, payload, { headers: getAuth() }); modal.hide(); load(); showToast('Guardado','success'); }catch(e){ showToast('Error guardando','danger'); } });
+
+    document.querySelector('#listTable tbody').addEventListener('click', async (e)=>{ const t=e.target; if(t.classList.contains('btn-edit')){ const id=t.dataset.id; try{ const res=await axios.get(api + '?id=' + id, { headers: getAuth() }); const d=res.data; await loadBrands(); document.getElementById('id').value=d.id; document.getElementById('brandId').value=d.brand_id||''; document.getElementById('name').value=d.name||''; document.getElementById('active').checked = d.active==1; modal.show(); }catch(e){ showToast('Error cargando modelo','danger'); } } if(t.classList.contains('btn-del')){ const id=t.dataset.id; if(!confirm('Confirmar desactivación?')) return; try{ await axios.delete(api + '?id=' + id, { headers: getAuth() }); load(); showToast('Desactivado','success'); }catch(e){ showToast('Error al desactivar','danger'); } } });
+
+    load(); loadBrands(); loadBrands('filterBrand');
+    document.getElementById('btnFilter').addEventListener('click', ()=>{
+      const b = document.getElementById('filterBrand').value||'';
+      const q = document.getElementById('filterQ').value.trim();
+      load({ brandId: b, q: q });
+    });
+    document.getElementById('btnClear').addEventListener('click', ()=>{
+      document.getElementById('filterBrand').value='';
+      document.getElementById('filterQ').value='';
+      load();
+    });
+    document.getElementById('filterQ').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('btnFilter').click(); } });
+    (function enhanceTableScroll(containerSelector){
+      try{
+        const c = document.querySelector(containerSelector||'.table-scroll');
+        if(!c) return;
+        const onScroll = () => { if(c.scrollTop>0) c.classList.add('scrolled'); else c.classList.remove('scrolled'); };
+        c.addEventListener('scroll', onScroll, { passive: true });
+        // trigger initial state after a short delay to allow table render
+        setTimeout(onScroll, 50);
+      }catch(e){ console.error('enhanceTableScroll error', e); }
+    })('.table-scroll');
+  </script>
+</body>
+</html>

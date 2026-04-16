@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin - Técnicos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/admin.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <div id="adminNavbar"></div>
+    <script src="/admin/navbar.js"></script>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h4">Técnicos</h1>
+            <div>
+              <button id="btnNew" class="btn btn-success">Nuevo técnico</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" id="techTable">
+                  <thead class="table-light">
+                    <tr><th>ID</th><th>Nombre</th><th>Marca</th><th class="text-end">Acciones</th></tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="techModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Técnico</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <form id="techForm">
+              <input type="hidden" id="techId" />
+              <div class="mb-3"><label class="form-label">Nombre</label><input id="techName" class="form-control" required /></div>
+              <div class="mb-3"><label class="form-label">Teléfono</label><input id="techPhone" class="form-control" /></div>
+              <div class="mb-3"><label class="form-label">Email</label><input id="techEmail" class="form-control" type="email" /></div>
+              <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="techActive" checked><label class="form-check-label" for="techActive">Activo</label></div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button id="saveTech" type="button" class="btn btn-primary">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toasts -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+      <div id="toastContainer"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/admin-utils.js"></script>
+    <script src="/js/admin-nav-active.js"></script>
+    <script>
+      const api = '/api/technicians.php';
+      const modalEl = document.getElementById('techModal');
+      const bsModal = new bootstrap.Modal(modalEl);
+
+      function getAuthHeaders(){ const t = localStorage.getItem('token'); return t?{Authorization:'Bearer '+t}:{}; }
+
+      async function loadTechs(){
+        try{
+          const res = await axios.get(api + '?all=1', { headers: getAuthHeaders() });
+          const tbody = document.querySelector('#techTable tbody'); tbody.innerHTML='';
+          (res.data||[]).forEach(t=>{
+            const include = (typeof t.active === 'undefined') || (t.active==1);
+            if(!include) return;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${t.id}</td><td>${escapeHtml(t.name||'')}</td><td>${escapeHtml(t.brand_name||'')}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><button class="btn btn-sm btn-primary btn-action btn-edit" data-id="${t.id}">Editar</button><button class="btn btn-sm btn-danger btn-action btn-delete" data-id="${t.id}">${t.active==1?'Desactivar':'Eliminar'}</button></div></td>`;
+            tbody.appendChild(tr);
+          });
+        }catch(e){ showToast('Error cargando técnicos','danger'); }
+      }
+
+      document.getElementById('btnNew').addEventListener('click', ()=>{ document.getElementById('techForm').reset(); document.getElementById('techId').value=''; document.getElementById('techActive').checked=true; bsModal.show(); });
+
+      document.getElementById('saveTech').addEventListener('click', async ()=>{
+        const id = document.getElementById('techId').value || null;
+        const payload = { name: document.getElementById('techName').value.trim(), phone: document.getElementById('techPhone').value.trim(), email: document.getElementById('techEmail').value.trim(), active: document.getElementById('techActive').checked?1:0 };
+        if(!payload.name){ showToast('El nombre es obligatorio','warning'); return; }
+        try{
+          if(id){ await axios.put(api + '?id=' + id, payload, { headers: getAuthHeaders() }); showToast('Técnico actualizado','success'); }
+          else{ await axios.post(api, payload, { headers: getAuthHeaders() }); showToast('Técnico creado','success'); }
+          bsModal.hide(); loadTechs();
+        }catch(e){ showToast('Error guardando técnico','danger'); }
+      });
+
+      document.querySelector('#techTable tbody').addEventListener('click', async (e)=>{
+        const t = e.target;
+        if(t.classList.contains('btn-edit')){
+          const id = t.dataset.id; try{ const res = await axios.get(api + '?id=' + id, { headers: getAuthHeaders() }); const d = res.data; document.getElementById('techId').value = d.id; document.getElementById('techName').value = d.name||''; document.getElementById('techPhone').value = d.phone||''; document.getElementById('techEmail').value = d.email||''; document.getElementById('techActive').checked = (d.active==1); bsModal.show(); }catch(e){ showToast('Error cargando técnico','danger'); }
+        }
+        if(t.classList.contains('btn-delete')){
+          const id = t.dataset.id; if(!confirm('Confirmar desactivación del técnico?')) return; try{ await axios.delete(api + '?id=' + id, { headers: getAuthHeaders() }); showToast('Técnico desactivado','success'); loadTechs(); }catch(e){ showToast('Error desactivando técnico','danger'); }
+        }
+      });
+
+      // init
+      loadTechs();
+    </script>
+  </body>
+</html>

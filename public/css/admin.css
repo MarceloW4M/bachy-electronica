@@ -1,0 +1,97 @@
+:root{
+  --primary:#0d6efd;
+  --muted:#6c757d;
+}
+body.bg-light{ background-color:#f8f9fa; }
+.navbar{ padding:.6rem 1rem; }
+.navbar .navbar-brand{ font-weight:600; }
+.navbar .nav-link{ color:rgba(255,255,255,0.95); }
+.d-flex.h-title { align-items:center; }
+.navbar .navbar-nav { align-items: center; }
+.navbar .btn { align-self: center; }
+.h4{ margin-bottom:0.25rem; }
+.card{ border-radius:.5rem; }
+.card-body.p-0 > .table-responsive{ padding:.5rem; }
+.table-hover tbody tr:hover{ background:#f1f5f9; }
+.table-light th{ background:#f8fafc; }
+.btn-primary{ min-width:120px; }
+.modal-header{ padding: .75rem 1rem; }
+.modal-title{ margin:0; }
+.toast{ max-width: 360px; }
+.form-label{ font-weight:500; }
+/* small adjustments for spacing consistency */
+.container .h4, .container .h3{ line-height:1.1; }
+
+/* show navbar dropdown on hover for desktop */
+@media (min-width: 992px) {
+  .navbar .dropdown:hover > .dropdown-menu {
+    display: block;
+    margin-top: 0;
+  }
+}
+
+/* Dropdown semitransparente azul para el menú de reparaciones */
+.navbar .dropdown-menu {
+  background-color: rgba(13,110,253,0.5); /* --primary con 50% opacidad */
+  color: #ffffff;
+  border: none;
+  backdrop-filter: blur(4px);
+}
+.navbar .dropdown-menu .dropdown-item {
+  color: #ffffff;
+}
+.navbar .dropdown-menu .dropdown-item:hover {
+  background-color: rgba(255,255,255,0.08);
+}
+
+/* Botones de acción con ancho uniforme para tablas */
+.btn-action{ min-width:110px; display:inline-flex; align-items:center; justify-content:center; }
+
+/* Scroll para tablas largas: limita la altura al viewport y permite scroll vertical */
+.table-scroll{ max-height: calc(100vh - 220px); overflow:auto; }
+/* Encabezados fijos dentro del contenedor .table-scroll */
+.table-scroll thead th{ position: sticky; top: 0; background: #f8fafc; z-index: 3; }
+.table-scroll thead th:first-child{ z-index: 4; }
+
+/* Mejoras de scroll: smooth en iOS, scrollbar más delgado y sombra dinámica */
+.table-scroll{
+  -webkit-overflow-scrolling: touch; /* inertial scrolling en iOS */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(0,0,0,0.15) transparent;
+}
+.table-scroll::-webkit-scrollbar{ width: 10px; height: 10px; }
+.table-scroll::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.12); border-radius: 8px; }
+.table-scroll::-webkit-scrollbar-thumb:hover{ background: rgba(0,0,0,0.18); }
+
+/* Sombra cuando el contenedor está desplazado */
+.table-scroll.scrolled thead th{ box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
+
+/* Login panel background usando el logo en /src/logo.png */
+.login-panel{
+  background-color: #ffffff; /* fondo blanco */
+  min-height: 480px;
+  color: #111;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.25rem 2rem 1.25rem;
+}
+/* Logo centrado como pseudo-elemento al 100% de opacidad */
+.login-panel::before{
+  content: '';
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url('/img/logo.png');
+  background-repeat: no-repeat;
+  background-position: center 20%; /* un poco más arriba */
+  background-size: 72%; /* 20% más grande (60% * 1.2 = 72%) */
+  opacity: 1; /* logo totalmente visible */
+}
+.login-panel > *{ position: relative; z-index: 1; width:100%; }
+
+.login-content{ width:100%; max-width:420px; margin: 0 auto; margin-top: auto; margin-bottom: 0.5rem; }
+
+@media (max-width: 576px) {
+  .login-panel{ min-height: 520px; padding: 1rem; }
+  .login-panel::before{ background-size: 96%; background-position: center 14%; }
+  .login-content{ max-width:320px; margin-bottom: 0.5rem; }
+}

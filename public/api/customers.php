@@ -19,6 +19,7 @@ if ($method === 'GET') {
             echo json_encode(['error' => 'Cliente no encontrado'], JSON_UNESCAPED_UNICODE);
             exit;
         }
+        if (isset($row['password_hash'])) { unset($row['password_hash']); }
         echo json_encode($row, JSON_UNESCAPED_UNICODE);
         exit;
     }
@@ -66,11 +67,14 @@ if ($method === 'GET') {
             echo json_encode(null, JSON_UNESCAPED_UNICODE);
             exit;
         }
+        if (isset($row['password_hash'])) { unset($row['password_hash']); }
         echo json_encode($row, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
     $rows = $pdo->query('SELECT * FROM customers ORDER BY created_at DESC, id DESC')->fetchAll();
+    // remove password_hash from output
+    foreach ($rows as &$r) { if (isset($r['password_hash'])) { unset($r['password_hash']); } }
     echo json_encode($rows, JSON_UNESCAPED_UNICODE);
     exit;
 }
@@ -80,6 +84,15 @@ if ($method === 'POST') {
         http_response_code(422);
         echo json_encode(['error' => 'El nombre es obligatorio'], JSON_UNESCAPED_UNICODE);
         exit;
+    }
+
+    if (array_key_exists('password', $input) && $input['password'] !== null && $input['password'] !== '') {
+        $password = (string) $input['password'];
+        if (strlen($password) < 8) {
+            http_response_code(422);
+            echo json_encode(['error' => 'La contraseña debe tener al menos 8 caracteres'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
     }
 
     // Validate DNI/CUIT: allow empty, otherwise only digits (max 32)
@@ -119,9 +132,20 @@ if ($method === 'POST') {
         $postal_code = isset($input['postal_code']) ? trim((string)$input['postal_code']) : null;
     }
 
-    $stmt = $pdo->prepare('INSERT INTO customers (name, dni_cuit, phone, email, address, province_id, city_id, postal_code, contact_name, contact_phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+
+    // id_boot optional (from external system like n8n/telegram)
+    $id_boot = isset($input['id_boot']) && $input['id_boot'] !== '' ? trim((string)$input['id_boot']) : null;
+
+    // Accept optional password to store a password hash for the customer
+    $password_hash = null;
+    if (!empty($input['password'])) {
+        $password_hash = password_hash((string)$input['password'], PASSWORD_DEFAULT);
+    }
+
+    $stmt = $pdo->prepare('INSERT INTO customers (name, password_hash, dni_cuit, phone, email, address, province_id, city_id, postal_code, contact_name, contact_phone, id_boot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
         $input['name'],
+        $password_hash,
         $dni_clean,
         $input['phone'] ?? null,
         $input['email'] ?? null,
@@ -131,6 +155,7 @@ if ($method === 'POST') {
         $postal_code,
         $input['contact_name'] ?? null,
         $input['contact_phone'] ?? null,
+        $id_boot,
     ]);
 
     echo json_encode(['id' => (int) $pdo->lastInsertId()], JSON_UNESCAPED_UNICODE);
@@ -194,6 +219,7 @@ if ($method === 'PUT') {
     if (array_key_exists('postal_code', $input)){ $fields[] = 'postal_code = ?'; $params[] = $input['postal_code'] ?? null; }
     if (array_key_exists('contact_name', $input)){ $fields[] = 'contact_name = ?'; $params[] = $input['contact_name'] ?? null; }
     if (array_key_exists('contact_phone', $input)){ $fields[] = 'contact_phone = ?'; $params[] = $input['contact_phone'] ?? null; }
+    if (array_key_exists('id_boot', $input)){ $fields[] = 'id_boot = ?'; $params[] = $input['id_boot'] !== null ? $input['id_boot'] : null; }
 
     if (empty($fields)){
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);

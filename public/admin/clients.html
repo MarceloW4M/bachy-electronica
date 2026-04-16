@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin - Clientes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/admin.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <div id="adminNavbar"></div>
+    <script src="/admin/navbar.js"></script>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h4">Clientes</h1>
+            <div>
+              <button id="btnNew" class="btn btn-success">Nuevo cliente</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0" id="clientsTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th>ID</th>
+                      <th>Nombre</th>
+                      <th>Teléfono</th>
+                      <th>Dirección</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="clientModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Cliente</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <form id="clientForm">
+              <input type="hidden" id="clientId" />
+              <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <input id="name" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">DNI / CUIT</label>
+                <input id="dni_cuit" class="form-control" inputmode="numeric" pattern="[0-9]+" maxlength="32" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Teléfono</label>
+                <input id="phone" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input id="email" class="form-control" type="email" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Dirección</label>
+                <input id="address" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Provincia</label>
+                <select id="province_id" class="form-select">
+                  <option value="">-- Seleccionar provincia --</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Ciudad</label>
+                <select id="city_id" class="form-select" disabled>
+                  <option value="">-- Seleccionar ciudad --</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Código postal</label>
+                <input id="postal_code" class="form-control" readonly />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button id="saveBtn" type="button" class="btn btn-primary">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toasts -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+      <div id="toastContainer"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/admin-utils.js"></script>
+    <script src="/js/admin-nav-active.js"></script>
+    <script>
+      // logout handler
+      document.addEventListener('DOMContentLoaded', ()=>{
+        const lo = document.getElementById('logout');
+        if(lo) lo.addEventListener('click', async ()=>{ localStorage.removeItem('token'); await fetch('/auth.php/logout', { method: 'POST' }); window.location.href = '/admin/login.html'; });
+      });
+      const api = '/api/customers.php';
+      const modalEl = document.getElementById('clientModal');
+      const bsModal = new bootstrap.Modal(modalEl);
+
+      // remove invalid marker on input
+      ['name','dni_cuit','phone','address'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => el.classList.remove('is-invalid'));
+      });
+
+      function getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        return token ? { Authorization: 'Bearer ' + token } : {};
+      }
+      
+      // use showToast from admin-utils
+
+      async function loadClients() {
+        try {
+          const res = await axios.get(api, { headers: getAuthHeaders() });
+          const rows = res.data || [];
+          const tbody = document.querySelector('#clientsTable tbody');
+          tbody.innerHTML = '';
+          for (const r of rows) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td>${r.id}</td>
+              <td>${escapeHtml(r.name||'')}</td>
+              <td>${escapeHtml(r.phone||'')}</td>
+              <td>${escapeHtml(r.address||'')}</td>
+              <td>
+                <button class="btn btn-sm btn-primary btn-edit" data-id="${r.id}">Editar</button>
+                <button class="btn btn-sm btn-danger btn-delete" data-id="${r.id}">Borrar</button>
+              </td>`;
+            tbody.appendChild(tr);
+          }
+        } catch (err) {
+          showToast('Error cargando clientes', 'danger');
+        }
+      }
+
+      function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+      // use escapeHtml from admin-utils
+
+      // Province / city helpers
+      let _provincesLoaded = false;
+      async function ensureProvincesLoaded() {
+        if (_provincesLoaded) return;
+        try {
+          const res = await axios.get('/api/provinces.php', { headers: getAuthHeaders() });
+          const sel = document.getElementById('province_id');
+          sel.innerHTML = '<option value="">-- Seleccionar provincia --</option>';
+          for (const p of res.data || []) {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name;
+            sel.appendChild(opt);
+          }
+          _provincesLoaded = true;
+        } catch (e) {
+          console.error('Error cargando provincias', e);
+        }
+      }
+
+      async function loadCities(provinceId, selectCityId) {
+        const citySel = document.getElementById('city_id');
+        citySel.innerHTML = '<option value="">-- Seleccionar ciudad --</option>';
+        document.getElementById('postal_code').value = '';
+        if (!provinceId) { citySel.disabled = true; return; }
+        try {
+          const res = await axios.get('/api/cities.php?province_id=' + provinceId, { headers: getAuthHeaders() });
+          for (const c of res.data || []) {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.name;
+            if (c.postal_code) opt.dataset.postal = c.postal_code;
+            citySel.appendChild(opt);
+          }
+          citySel.disabled = false;
+          if (selectCityId) {
+            citySel.value = selectCityId;
+            const sel = citySel.querySelector('option[value="' + selectCityId + '"]');
+            if (sel && sel.dataset.postal) document.getElementById('postal_code').value = sel.dataset.postal;
+          }
+        } catch (e) {
+          console.error('Error cargando ciudades', e);
+          citySel.disabled = true;
+        }
+      }
+
+      document.getElementById('province_id').addEventListener('change', async (e) => {
+        const v = e.target.value || null;
+        await loadCities(v, null);
+      });
+
+      document.getElementById('city_id').addEventListener('change', (e) => {
+        const sel = e.target;
+        const opt = sel.options[sel.selectedIndex];
+        document.getElementById('postal_code').value = (opt && opt.dataset.postal) ? opt.dataset.postal : '';
+      });
+
+      document.getElementById('btnNew').addEventListener('click', async () => {
+        document.getElementById('clientForm').reset();
+        document.getElementById('clientId').value = '';
+        await ensureProvincesLoaded();
+        document.getElementById('city_id').innerHTML = '<option value="">-- Seleccionar ciudad --</option>';
+        document.getElementById('city_id').disabled = true;
+        document.getElementById('postal_code').value = '';
+        bsModal.show();
+      });
+
+      document.getElementById('saveBtn').addEventListener('click', async () => {
+        const id = document.getElementById('clientId').value || null;
+        const payload = {
+          name: document.getElementById('name').value.trim(),
+          dni_cuit: document.getElementById('dni_cuit').value.trim(),
+          phone: document.getElementById('phone').value.trim(),
+          email: document.getElementById('email').value.trim(),
+          address: document.getElementById('address').value.trim(),
+          province_id: document.getElementById('province_id').value || null,
+          city_id: document.getElementById('city_id').value || null,
+          postal_code: document.getElementById('postal_code').value || null,
+        };
+        // Client-side validation: DNI/CUIT must be only digits (max 32) or empty
+        if (payload.dni_cuit) {
+          if (!/^\d{1,32}$/.test(payload.dni_cuit)) {
+            showToast('DNI/CUIT inválido. Solo dígitos (máx 32).', 'warning');
+            return;
+          }
+        }
+        // Clear previous invalid markers
+        ['name','dni_cuit','phone','address'].forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('is-invalid'); });
+        const invalids = [];
+        if (!payload.name) invalids.push('name');
+        if (!payload.dni_cuit) invalids.push('dni_cuit');
+        if (!payload.phone) invalids.push('phone');
+        if (!payload.address) invalids.push('address');
+        if (invalids.length) {
+          invalids.forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('is-invalid'); });
+          document.getElementById(invalids[0]).focus();
+          showToast('Complete los campos obligatorios', 'warning');
+          return;
+        }
+
+        // If creating new client, verify DNI/CUIT uniqueness
+        if (!id) {
+          try {
+            const res = await axios.get(api + '?dni=' + encodeURIComponent(payload.dni_cuit), { headers: getAuthHeaders() });
+            if (res.data) {
+              showToast('Ya existe un cliente con ese DNI/CUIT: ' + (res.data.name || 'Sin nombre') + ' (ID ' + res.data.id + ')', 'warning');
+              // highlight dni field and focus
+              const dniEl = document.getElementById('dni_cuit'); if (dniEl) { dniEl.classList.add('is-invalid'); dniEl.focus(); }
+              return;
+            }
+          } catch (err) {
+            console.warn('Error verificando DNI', err);
+          }
+        }
+        try {
+          if (id) {
+            await axios.put(api + '?id=' + id, payload, { headers: getAuthHeaders() });
+            showToast('Cliente actualizado', 'success');
+          } else {
+            await axios.post(api, payload, { headers: getAuthHeaders() });
+            showToast('Cliente creado', 'success');
+          }
+          bsModal.hide();
+          loadClients();
+        } catch (err) {
+          showToast('Error guardando cliente', 'danger');
+        }
+      });
+
+      document.querySelector('#clientsTable tbody').addEventListener('click', async (e) => {
+        const target = e.target;
+        if (target.classList.contains('btn-edit')) {
+          const id = target.dataset.id;
+          try {
+            const res = await axios.get(api + '?id=' + id, { headers: getAuthHeaders() });
+            const c = res.data;
+            document.getElementById('clientId').value = c.id;
+            document.getElementById('name').value = c.name || '';
+              document.getElementById('dni_cuit').value = c.dni_cuit || '';
+            document.getElementById('phone').value = c.phone || '';
+            document.getElementById('email').value = c.email || '';
+            document.getElementById('address').value = c.address || '';
+            // set province and city; ensure selects are loaded
+            await ensureProvincesLoaded();
+            document.getElementById('province_id').value = c.province_id || '';
+            await loadCities(c.province_id || null, c.city_id || null);
+            document.getElementById('postal_code').value = c.postal_code || '';
+            bsModal.show();
+          } catch (err) { showToast('Error cargando cliente', 'danger'); }
+        }
+
+        if (target.classList.contains('btn-delete')) {
+          const id = target.dataset.id;
+          if (!confirm('¿Borrar cliente?')) return;
+          try {
+            await axios.delete(api + '?id=' + id, { headers: getAuthHeaders() });
+            showToast('Cliente borrado', 'success');
+            loadClients();
+          } catch (err) { showToast('Error borrando cliente', 'danger'); }
+        }
+      });
+
+      // init
+      loadClients();
+    </script>
+  </body>
+</html>
