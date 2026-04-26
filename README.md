@@ -1,126 +1,273 @@
 # Bachy TW
 
-Aplicación administrativa mínima (PHP + Apache) con MySQL, preparada para ejecutarse con Docker Compose.
+Sistema administrativo para gestión de clientes, dispositivos, reparaciones, agenda, stock, ventas, compras y documentos comerciales.
 
-Resumen rápido
-- Servicio web disponible en el puerto `8185` (mappeado a `80` del contenedor).
-- Base de datos MySQL en el contenedor `bachy-db` (puerto externo `3307` → interno `3306`).
+La aplicación principal corre sobre PHP 8.2 + Apache y MySQL 8. Este repositorio está preparado para ejecutarse principalmente con Docker Compose.
 
-Requisitos
+## Resumen
+
+- Aplicación web principal en PHP + Apache.
+- Base de datos MySQL 8.
+- Scripts de migración y carga inicial.
+- Servicio MCP opcional para integración con n8n.
+- Utilidades opcionales en Node.js para PDF y frontend.
+
+Puertos publicados por defecto:
+
+- Aplicación web: `http://localhost:8185`
+- MySQL desde el host: `127.0.0.1:3307`
+- MCP: `http://localhost:3101`
+
+## Requisitos
+
+Para el flujo recomendado de instalación:
+
+- Git
 - Docker
-- Docker Compose (v2 / comando `docker compose`)
-- Git (para clonar el repositorio)
+- Docker Compose v2 (`docker compose`)
 
-Instalación desde cero (pasos mínimos)
+Opcionales:
 
-1. Clonar el repositorio:
+- Node.js 18+ y npm, solo si vas a usar generación de PDF u otras utilidades Node.
+- Cliente MySQL, solo si quieres intervenir la base manualmente.
+
+## Instalación desde cero
+
+### 1. Clonar el repositorio
 
 ```bash
-git clone <repo-url> bachy-tw
+git clone <URL_DEL_REPOSITORIO> bachy-tw
 cd bachy-tw
 ```
 
-2. Crear el archivo de configuración `.env` (opcional, se usan valores por defecto si no existe). Ejemplo mínimo (`.env`):
+### 2. Crear el archivo `.env`
+
+La configuración base se lee desde el archivo raíz `.env` mediante `src/config.php`.
+
+Crea un archivo `.env` con este contenido mínimo:
 
 ```env
-# Conexión a la base de datos (valores por defecto usados por el código)
 DB_HOST=db
 DB_PORT=3306
 DB_NAME=bachy
 DB_USER=bachy
 DB_PASS=secret
 
-# Clave para JWT (cámbiala en producción)
-JWT_SECRET=una_clave_segura_aqui
+JWT_SECRET=cambia_esta_clave_por_una_mas_segura
+
+MCP_AUTH_TOKEN=define_un_token_largo_y_seguro
+MCP_ENABLE_WRITES=false
+MCP_ALLOWED_WRITE_TOOLS=
 ```
 
-3. Levantar contenedores:
+Notas importantes:
+
+- Para Docker, `DB_HOST=db` es correcto porque la app se conecta al servicio MySQL dentro de la red de Compose.
+- Si cambias credenciales o nombre de base, deben coincidir con lo configurado en `docker-compose.yml`.
+- `JWT_SECRET` conviene cambiarlo incluso en desarrollo compartido.
+
+### 3. Levantar la infraestructura
 
 ```bash
 docker compose up -d --build
 ```
 
-4. Ejecutar migraciones para crear las tablas en la base de datos:
+Esto levanta los servicios:
+
+- `bachy-app`
+- `bachy-db`
+- `bachy-mcp`
+
+Si todavía no quieres levantar el MCP:
+
+```bash
+docker compose up -d --build app db
+```
+
+### 4. Verificar que la stack esté activa
+
+```bash
+docker compose ps
+```
+
+Prueba rápida de la aplicación:
+
+```bash
+curl http://localhost:8185/
+```
+
+Respuesta esperada:
+
+```json
+{"app":"bachy","status":"ok","message":"Sistema base levantado"}
+```
+
+## Inicialización de la base de datos
+
+### 5. Crear la estructura base
+
+En una instalación nueva ejecuta:
 
 ```bash
 docker exec -it bachy-app php public/migrate.php
 ```
 
-5. Crear un usuario administrador (ejemplo):
+Este script:
+
+- ejecuta `db/migrations.sql`,
+- crea tablas base si no existen,
+- agrega columnas e índices incluidos allí,
+- inserta algunos datos iniciales, como marcas y modelos base.
+
+### 6. Aplicar migraciones incrementales si corresponde
+
+Importante: `public/migrate.php` ejecuta solo `db/migrations.sql`.
+
+Las migraciones SQL individuales dentro de `db/migrations/` se aplican manualmente con:
 
 ```bash
-docker exec -it bachy-app php public/create_user.php admin MiPass123
+docker exec -it bachy-app php scripts/run_migration.php db/migrations/NOMBRE_DE_LA_MIGRACION.sql
 ```
 
-6. (Opcional) Cargar datos de ejemplo/seed:
+Ejemplo:
+
+```bash
+docker exec -it bachy-app php scripts/run_migration.php db/migrations/20260412_add_totals_to_repairs.sql
+```
+
+Recomendación práctica:
+
+- Instalación nueva: ejecutar primero `public/migrate.php`.
+- Luego revisar si hay migraciones recientes en `db/migrations/` que todavía deban aplicarse.
+- En una base ya existente: aplicar solo las migraciones nuevas necesarias con `scripts/run_migration.php`.
+
+## Crear el primer usuario administrador
+
+### 7. Alta del usuario inicial
+
+```bash
+docker exec -it bachy-app php public/create_user.php admin MiClaveSegura123
+```
+
+Formato general:
+
+```bash
+docker exec -it bachy-app php public/create_user.php USUARIO CLAVE
+```
+
+El usuario queda con rol `admin` y contraseña hasheada.
+
+## Primer acceso al sistema
+
+### 8. URLs principales
+
+- Página base: `http://localhost:8185/`
+- Login admin: `http://localhost:8185/admin/login.html`
+- Pantalla posterior al login: `http://localhost:8185/admin/agenda.html`
+
+Flujo actual de autenticación:
+
+1. Abrir `admin/login.html`.
+2. Ingresar usuario y contraseña.
+3. El frontend llama a `POST /auth.php/login`.
+4. Si el login es válido, guarda el token JWT en `localStorage`.
+5. Redirige a `admin/agenda.html`.
+
+## Carga inicial opcional de datos
+
+### 9. Categorías base
 
 ```bash
 docker exec -it bachy-app php scripts/seed_categories.php
-# Si tienes el CSV de localidades:
+```
+
+### 10. Provincias y ciudades desde CSV
+
+El repositorio ya incluye el archivo:
+
+- `data/localidades_cp_maestro_clean.csv`
+
+Para importar provincias y ciudades:
+
+```bash
 docker exec -it bachy-app php scripts/import_localidades.php
 ```
 
-Acceso a la aplicación
-- Login: http://localhost:8185/admin/login.html
-- Dashboard: http://localhost:8185/admin/dashboard.html
-- Página pública (index): http://localhost:8185/
+## Orden recomendado de puesta en marcha
 
-Servicio MCP para n8n
-- El proyecto incluye un servidor MCP en `mcp/bachy-db-mcp`
-- Expone consultas de clientes, dispositivos, técnicos, reparaciones, agenda, stock, depósitos, proveedores, marcas, modelos, provincias, ciudades, ventas, compras, presupuestos, remitos y facturas
-- Se publica por Docker Compose en `http://localhost:3101/mcp/sse`
+Para dejar el sistema operativo en un entorno nuevo:
 
-Levantar solo el MCP:
+1. Clonar el repositorio.
+2. Crear el archivo `.env`.
+3. Ejecutar `docker compose up -d --build`.
+4. Ejecutar `docker exec -it bachy-app php public/migrate.php`.
+5. Aplicar migraciones puntuales de `db/migrations/` si hacen falta.
+6. Crear el usuario administrador.
+7. Ejecutar `scripts/seed_categories.php`.
+8. Ejecutar `scripts/import_localidades.php` si vas a usar provincias/ciudades.
+9. Entrar a `http://localhost:8185/admin/login.html`.
+
+## Operación diaria y mantenimiento
+
+### Ver estado de servicios
 
 ```bash
-docker compose up -d --build mcp
+docker compose ps
 ```
 
-Variables MCP en `.env`
+### Ver logs generales
 
-```env
-MCP_AUTH_TOKEN=define_un_token_seguro
-MCP_ENABLE_WRITES=true
-MCP_ALLOWED_WRITE_TOOLS=create_customer,create_device,create_repair,upsert_stock,create_sale,create_purchase,create_quote,create_remito,create_invoice
+```bash
+docker compose logs --tail 200
 ```
 
-Configuración en n8n
-- Nodo: `MCP Client Tool`
-- `SSE Endpoint`: `http://127.0.0.1:3101/mcp/sse`
-- `Authentication`: `Bearer`
-- `Bearer Token`: el valor de `MCP_AUTH_TOKEN`
+### Ver logs de la aplicación
 
-Herramientas de escritura actualmente habilitadas por allowlist
-- `create_customer`
-- `create_device`
-- `create_repair`
-- `upsert_stock`
-- `create_sale`
-- `create_purchase`
-- `create_quote`
-- `create_remito`
-- `create_invoice`
+```bash
+docker compose logs --tail 200 app
+```
 
-Si n8n corre en Docker, usa `http://host.docker.internal:3101/mcp/sse` o la IP del host.
+### Ver logs de MySQL
 
-Conexión a la base de datos desde el host
-- MySQL está expuesto en el puerto `3307` del host (mapeado a `3306` del contenedor). Por ejemplo:
+```bash
+docker compose logs --tail 200 db
+```
+
+### Reiniciar servicios
+
+```bash
+docker compose restart
+```
+
+### Detener la stack
+
+```bash
+docker compose down
+```
+
+### Reconstruir imágenes
+
+```bash
+docker compose up -d --build
+```
+
+## Acceso manual a MySQL
+
+Desde el host:
 
 ```bash
 mysql -h 127.0.0.1 -P 3307 -u bachy -psecret bachy
 ```
 
-Archivos importantes
-- `docker-compose.yml` — definición de servicios (`app` y `db`).
-- `docker/php/Dockerfile` — Dockerfile para el contenedor PHP/Apache.
-- `public/migrate.php` — ejecuta las migraciones SQL en `db/migrations.sql`.
-- `public/create_user.php` — script CLI para crear un usuario admin.
-- `scripts/seed_categories.php`, `scripts/import_localidades.php` — utilidades para poblar datos.
+Desde el contenedor:
 
-Solución de problemas comunes
-- Si no arrancan los contenedores: revisa los logs con `docker compose logs --tail 200`.
-- Si la aplicación no alcanza la base de datos, verifica que `bachy-db` esté saludable y que las credenciales en `.env` coincidan con las definidas en `docker-compose.yml`.
-- Para reiniciar desde cero (elimina datos persistentes):
+```bash
+docker exec -it bachy-db mysql -u root -prootpass
+```
+
+## Reinicio completo desde cero
+
+Si necesitas eliminar contenedores y datos persistidos:
 
 ```bash
 docker compose down
@@ -128,46 +275,133 @@ docker volume rm bachy-tw_mysql_data
 docker compose up -d --build
 ```
 
-Buenas prácticas
-- Cambia `JWT_SECRET` por una cadena segura en producción.
-- No expongas la base de datos MySQL directamente en producción sin firewall/restore de seguridad.
+Después de eso tendrás que volver a:
 
-¿Necesitas que haga el commit de estos cambios en `README.md` o que añada un `CONTRIBUTING.md` con pasos más detallados? Si quieres, hago el commit ahora.
+- ejecutar migraciones,
+- crear el usuario admin,
+- recargar datos iniciales si los necesitas.
 
-### Documentación específica: `tablet-alta`
+## Servicio MCP opcional para n8n
 
-Se ha añadido documentación detallada sobre la nueva interfaz tablet-optimizada en `docs/tablet-alta.md`. Contiene:
+El repositorio incluye un servidor MCP en `mcp/bachy-db-mcp`.
 
-- Descripción del flujo (búsqueda por DNI → alta/edición → creación de device y reparación).
-- Endpoints utilizados y payloads esperados.
-- Pasos de pruebas E2E recomendados.
-- Sugerencias de mejora y notas de mantenimiento.
+Endpoint publicado por Docker:
 
-Ver la documentación en: [docs/tablet-alta.md](docs/tablet-alta.md)
+- `http://localhost:3101/mcp/sse`
 
----
-
-## Nota: comportamiento al guardar Informes
-
-Resumen: al guardar un informe desde la UI se registran los repuestos, la mano de obra y los subtotales en la orden de reparación asociada; la orden pasa a estado "Completada" y queda protegida contra ediciones desde el popup de reparación.
-
-- Migración incluida: `db/migrations/20260412_add_totals_to_repairs.sql` — añade columnas `parts_total`, `labour_price`, `total_amount` en `repairs`.
-- Para aplicar la migración manualmente (ejemplo con MySQL expuesto por Docker):
+Levantar solo el MCP:
 
 ```bash
-mysql -h 127.0.0.1 -P 3307 -u bachy -psecret bachy < db/migrations/20260412_add_totals_to_repairs.sql
+docker compose up -d --build mcp
 ```
 
-- Cambios clave:
-	- `public/api/repair_reports.php`: al insertar el informe, calcula totales, crea las líneas y actualiza la orden (`repairs`) con `parts_total`, `labour_price`, `total_amount` y establece `status = 'Completada'`.
-	 - `public/api/repairs.php`: rechaza `PUT` cuando la orden tiene estado `done` o `completada` (case-insensitive).
-	- `public/admin/repairs.html`: el modal de edición se deshabilita si la orden está concluida; al guardar informe la lista se refresca; se muestra un enlace "Editar Orden" solo para administradores (`localStorage.role === 'admin'`).
+Variables relevantes en `.env`:
 
-- Pruebas recomendadas:
-	1. Ejecutar la migración.
-	2. Crear una orden de reparación desde la UI o via API.
-	3. Abrir el modal Informe, agregar repuestos y mano de obra, y pulsar "Guardar informe".
-	4. Verificar en BD (`SELECT parts_total, labour_price, total_amount, status FROM repairs WHERE id = <ID>;`) que la orden tiene los totales y `status = 'Completada'`.
-	5. Intentar editar la orden (popup o PUT a la API); la edición debe rechazarse (403).
+```env
+MCP_AUTH_TOKEN=define_un_token_seguro
+MCP_ENABLE_WRITES=false
+MCP_ALLOWED_WRITE_TOOLS=
+```
 
-Si quieres, puedo crear un `CONTRIBUTING.md` con estos pasos y comandos listos para ejecutarse.
+Si luego necesitas escrituras limitadas:
+
+```env
+MCP_ENABLE_WRITES=true
+MCP_ALLOWED_WRITE_TOOLS=create_customer,create_device,create_repair,upsert_stock,create_sale,create_purchase,create_quote,create_remito,create_invoice
+```
+
+Configuración típica en n8n:
+
+- `SSE Endpoint`: `http://127.0.0.1:3101/mcp/sse`
+- `Authentication`: `Bearer`
+- `Bearer Token`: el valor de `MCP_AUTH_TOKEN`
+
+Si n8n corre en Docker, puede ser necesario usar:
+
+- `http://host.docker.internal:3101/mcp/sse`
+- o la IP del host Linux.
+
+## Utilidades Node.js opcionales
+
+Instalar dependencias:
+
+```bash
+npm install
+```
+
+Generar un PDF con Puppeteer:
+
+```bash
+node scripts/generate_pdf_puppeteer.js "http://localhost:8185/admin/repairs.html?id=123" ./out/orden-123.pdf
+```
+
+Esto no es necesario para levantar el sistema principal, solo para utilidades complementarias.
+
+## Archivos y carpetas importantes
+
+- `docker-compose.yml`: stack principal.
+- `docker/php/Dockerfile`: imagen PHP/Apache.
+- `src/config.php`: carga del `.env`.
+- `public/migrate.php`: inicialización base de la base de datos.
+- `public/create_user.php`: creación de usuario admin por CLI.
+- `scripts/run_migration.php`: ejecución de migraciones puntuales.
+- `scripts/seed_categories.php`: carga de categorías base.
+- `scripts/import_localidades.php`: importación de provincias y ciudades.
+- `public/admin/`: vistas administrativas.
+- `public/api/`: endpoints backend.
+- `mcp/bachy-db-mcp/`: servidor MCP.
+
+## Problemas frecuentes
+
+### La aplicación no abre
+
+```bash
+docker compose ps
+docker compose logs --tail 200 app
+```
+
+### El login falla
+
+Revisar:
+
+- que el usuario se haya creado con `public/create_user.php`,
+- que la base usada por la app sea la correcta,
+- que `JWT_SECRET` esté definido,
+- que no haya un token viejo guardado en `localStorage`.
+
+### La app no conecta con MySQL
+
+Verificar:
+
+- que el servicio `db` esté arriba,
+- que `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASS` coincidan,
+- que no haya cambios parciales entre `.env` y `docker-compose.yml`.
+
+### Faltan tablas o columnas
+
+Eso normalmente indica una de estas dos cosas:
+
+- no se ejecutó `public/migrate.php`,
+- falta aplicar alguna migración de `db/migrations/`.
+
+### El MCP no responde
+
+```bash
+docker compose logs --tail 200 mcp
+```
+
+Además, confirma que `MCP_AUTH_TOKEN` tenga un valor real.
+
+## Recomendaciones para producción
+
+- Cambiar `JWT_SECRET` por un valor largo y único.
+- Cambiar las credenciales por defecto de MySQL.
+- No exponer MySQL públicamente sin protección de red.
+- Mantener `MCP_ENABLE_WRITES=false` hasta validar bien el flujo.
+- Hacer backup antes de aplicar migraciones nuevas.
+
+## Documentación adicional
+
+- `docs/tablet-alta.md`: flujo tablet para alta y reparación.
+- `scripts/README-pdf.md`: uso del generador PDF con Puppeteer.
+- `mcp/bachy-db-mcp/README.md`: detalle del servidor MCP.
