@@ -13,7 +13,7 @@
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="repairsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Reparaciones</a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="repairsDropdown">
-              <li><a class="dropdown-item" href="/admin/repairs.html#order">Orden de reparación</a></li>
+              <li><a class="dropdown-item" href="/admin/repairs.html">Orden de reparación</a></li>
               <li><a class="dropdown-item" href="/admin/devices.html">Dispositivos</a></li>
               <li><a class="dropdown-item" href="/admin/technicians.html">Técnicos</a></li>
             </ul>

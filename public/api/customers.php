@@ -42,13 +42,14 @@ if ($method === 'GET') {
             echo json_encode(null, JSON_UNESCAPED_UNICODE);
             exit;
         }
-        $stmt = $pdo->prepare('SELECT id, name, dni_cuit FROM customers WHERE dni_cuit = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT * FROM customers WHERE dni_cuit = ? LIMIT 1');
         $stmt->execute([$dni_clean]);
         $row = $stmt->fetch();
         if (!$row) {
             echo json_encode(null, JSON_UNESCAPED_UNICODE);
             exit;
         }
+        if (isset($row['password_hash'])) { unset($row['password_hash']); }
         echo json_encode($row, JSON_UNESCAPED_UNICODE);
         exit;
     }

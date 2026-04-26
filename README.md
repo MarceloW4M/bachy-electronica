@@ -134,6 +134,17 @@ Buenas prácticas
 
 ¿Necesitas que haga el commit de estos cambios en `README.md` o que añada un `CONTRIBUTING.md` con pasos más detallados? Si quieres, hago el commit ahora.
 
+### Documentación específica: `tablet-alta`
+
+Se ha añadido documentación detallada sobre la nueva interfaz tablet-optimizada en `docs/tablet-alta.md`. Contiene:
+
+- Descripción del flujo (búsqueda por DNI → alta/edición → creación de device y reparación).
+- Endpoints utilizados y payloads esperados.
+- Pasos de pruebas E2E recomendados.
+- Sugerencias de mejora y notas de mantenimiento.
+
+Ver la documentación en: [docs/tablet-alta.md](docs/tablet-alta.md)
+
 ---
 
 ## Nota: comportamiento al guardar Informes

@@ -1,5 +1,15 @@
 {
+  "name": "bachy-tw",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "pdf:install": "npm install puppeteer --save",
+    "pdf:gen": "node scripts/generate_pdf_puppeteer.js"
+  },
   "dependencies": {
-    "fullcalendar": "^6.1.8"
+    "browserify": "^17.0.1",
+    "fullcalendar": "^6.1.8",
+    "puppeteer": "^24.42.0",
+    "qrcode": "^1.5.4"
   }
 }

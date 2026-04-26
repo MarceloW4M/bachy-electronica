@@ -102,7 +102,6 @@
       resto.classList.add('hidden'); submitBtn.classList.add('hidden');
       msg.textContent = '';
       if (cuitHelp) cuitHelp.classList.remove('hidden');
-      // if user edits again, re-enable verify button and allow edits
       verifyBtn.style.display = '';
       cuitInput.readOnly = false;
     });
@@ -124,20 +123,16 @@
         if (!res.ok){ checkResult.textContent = 'Error al consultar el servidor'; return; }
         const data = await res.json();
         if (!data){
-          // CUIT no existe: mostrar formulario para crear
           resto.classList.remove('hidden');
           submitBtn.classList.remove('hidden');
-          // bloquear edición del CUIT y ocultar verificar
           cuitInput.readOnly = true;
           verifyBtn.style.display = 'none';
-          // show boot field if idBoot present
           if (bootVar){
             const bf = document.getElementById('boot-field');
             const bi = document.getElementById('id_boot');
             if (bf && bi){ bf.style.display = ''; bi.value = bootVar; }
           }
         } else {
-          // Cliente existe: mostrar solo popup con mensaje específico y cerrar
           checkResult.textContent = '';
           showToast('Este CUIT ya fue dado de alta como Cliente de Bachy Electrónica.', 3000, true);
         }
@@ -169,7 +164,6 @@
         });
         const j = await res.json();
         if (res.ok){
-          // mostrar popup de éxito y cerrar en 5s
           showToast('Alta satisfactoria. Se enviará un mail de confirmación. Gracias!!!', 5000, true);
           resto.classList.add('hidden'); submitBtn.classList.add('hidden');
         } else {
@@ -180,14 +174,11 @@
       } finally{ submitBtn.disabled = false; submitBtn.textContent = 'Crear cliente'; }
     });
 
-    // allow enter to trigger verify when on cuit
     cuitInput.addEventListener('keydown', e=>{ if (e.key==='Enter'){ e.preventDefault(); checkCUIT(); } });
 
-    // read id_boot from url params (n8n/telegram can pass it)
     const urlParams = new URLSearchParams(window.location.search);
     const bootVar = urlParams.get('id_boot') || urlParams.get('idBoot') || '';
     if (bootVar){
-      // if provided, show boot field immediately but keep verify behavior
       const bf = document.getElementById('boot-field');
       const bi = document.getElementById('id_boot');
       if (bf && bi){ bf.style.display = 'none'; bi.value = bootVar; }

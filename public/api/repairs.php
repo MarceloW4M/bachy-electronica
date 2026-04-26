@@ -9,6 +9,35 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
+function normalize_repair_status($status)
+{
+    $value = trim((string) ($status ?? ''));
+    if ($value === '') {
+        return 'en reparacion';
+    }
+
+    $normalized = strtolower($value);
+    $normalized = str_replace(['á', 'é', 'í', 'ó', 'ú'], ['a', 'e', 'i', 'o', 'u'], $normalized);
+
+    if (in_array($normalized, ['pendiente', 'pending'], true)) {
+        return 'pending';
+    }
+
+    if (in_array($normalized, ['recibida', 'received'], true)) {
+        return 'received';
+    }
+
+    if (in_array($normalized, ['completada', 'done', 'concluido'], true)) {
+        return 'completada';
+    }
+
+    if (in_array($normalized, ['en reparacion', 'en-reparacion', 'repairing'], true)) {
+        return 'en reparacion';
+    }
+
+    return $value;
+}
+
 if ($method === 'GET' && isset($_GET['calendar'])) {
     $stmt = $pdo->query("SELECT r.id, r.device_model, r.status, COALESCE(r.scheduled_at, r.created_at) AS start_at, c.name AS customer_name, t.name AS technician_name FROM repairs r LEFT JOIN customers c ON c.id = r.customer_id LEFT JOIN technicians t ON t.id = r.technician_id ORDER BY start_at ASC");
     $events = [];
@@ -101,7 +130,7 @@ if ($method === 'POST') {
         $input['customer_id'] ?? null,
         $input['device_model'] ?? null,
         $input['problem'] ?? null,
-        $input['status'] ?? 'en reparacion',
+        normalize_repair_status($input['status'] ?? 'en reparacion'),
         $input['technician_id'] ?? null,
         $input['scheduled_at'] ?? null,
         $input['contact'] ?? null,
@@ -138,7 +167,7 @@ if ($method === 'PUT') {
         $input['device_id'] ?? null,
         $input['device_model'] ?? null,
         $input['problem'] ?? null,
-        $input['status'] ?? 'en reparacion',
+        normalize_repair_status($input['status'] ?? 'en reparacion'),
         $input['technician_id'] ?? null,
         $input['scheduled_at'] ?? null,
         $input['contact'] ?? null,

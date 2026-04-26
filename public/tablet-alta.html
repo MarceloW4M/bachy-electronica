@@ -1,0 +1,1336 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Alta Cliente Tablet</title>
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --panel: #ffffff;
+      --panel-border: #d9e0ea;
+      --text: #16202a;
+      --muted: #5f6c7a;
+      --accent: #0b84ff;
+      --accent-strong: #086fd8;
+      --accent-soft: #e8f3ff;
+      --danger: #b42318;
+      --success: #16703a;
+      --shadow: 0 18px 40px rgba(17, 24, 39, 0.12);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(11, 132, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+    }
+
+    body {
+      padding: 18px;
+    }
+
+    .page {
+      width: min(100%, 980px);
+      margin: 0 auto;
+      min-height: calc(100vh - 36px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      width: min(100%, 860px);
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      min-height: 760px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+      border: 1px solid #d7e7fb;
+      border-radius: 18px;
+      min-height: 148px;
+      padding: 14px;
+    }
+
+    .brand img {
+      width: 100%;
+      max-width: 220px;
+      height: auto;
+      display: block;
+    }
+
+    .title-wrap small {
+      display: inline-block;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .title-wrap {
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 30px;
+      line-height: 1.04;
+    }
+
+    .title-wrap p {
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+      max-width: 54ch;
+      text-align: center;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 18px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .status.success {
+      color: var(--success);
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+      flex: 1;
+      align-content: start;
+    }
+
+    .lookup-shell {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border: 1px solid #d7e7fb;
+      border-radius: 20px;
+      background: linear-gradient(180deg, #fbfdff 0%, #f3f8ff 100%);
+    }
+
+    .lookup-shell.hidden {
+      display: none;
+    }
+
+    .lookup-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .lookup-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 220px;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .lookup-btn {
+      min-height: 58px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .field.boot {
+      display: none;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    input,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 58px;
+      border: 1px solid #d2dae4;
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: #fff;
+      color: var(--text);
+      font-size: 18px;
+      transition: border-color 140ms ease, box-shadow 140ms ease;
+      appearance: none;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: rgba(11, 132, 255, 0.7);
+      box-shadow: 0 0 0 4px rgba(11, 132, 255, 0.14);
+    }
+
+    input[readonly] {
+      background: #f8fafc;
+      color: #667085;
+    }
+
+    .is-invalid {
+      border-color: rgba(180, 35, 24, 0.75);
+      box-shadow: 0 0 0 4px rgba(180, 35, 24, 0.12);
+    }
+
+    .hint {
+      margin-top: -2px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .details-shell {
+      display: none;
+      gap: 14px;
+    }
+
+    .details-shell.visible {
+      display: grid;
+    }
+
+    .section-block {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid #d7e1ee;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fcfdff 0%, #f6f9fd 100%);
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #e3ebf5;
+    }
+
+    .section-heading label {
+      font-size: 14px;
+      color: #1f3347;
+    }
+
+    .section-caption {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 600;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .actions {
+      display: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .actions.visible {
+      display: grid;
+    }
+
+    .btn {
+      min-height: 62px;
+      border: 0;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(11, 132, 255, 0.2);
+    }
+
+    .btn-secondary {
+      background: #edf2f7;
+      color: #334155;
+    }
+
+    .btn[disabled] {
+      opacity: 0.72;
+      cursor: wait;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      width: min(calc(100% - 24px), 560px);
+      z-index: 30;
+    }
+
+    .toast {
+      display: none;
+      border-radius: 18px;
+      padding: 15px 18px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 0 18px 34px rgba(17, 24, 39, 0.18);
+    }
+
+    .toast.visible {
+      display: block;
+    }
+
+    /* Modal styles */
+    .modal { display: none; position: fixed; inset: 0; z-index: 120; align-items: center; justify-content: center; }
+    .modal[aria-hidden="false"] { display: flex; }
+    .modal-overlay { position: absolute; inset: 0; background: rgba(2,6,23,0.55); }
+    .modal-content { position: relative; background: #fff; border-radius: 12px; padding: 20px; max-width: 460px; width: calc(100% - 40px); box-shadow: 0 18px 40px rgba(17,24,39,0.18); color: var(--text); z-index: 10; }
+    .modal-close { position: absolute; right: 8px; top: 6px; border: 0; background: transparent; font-size: 28px; line-height: 1; cursor: pointer; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px; }
+    .btn-ghost { background: #f8fafc; color: #1f3347; border: 1px solid #d7e1ee; }
+
+    .creation-status { text-align: center; margin-top: 8px; font-weight: 700; }
+    .creation-status.error { color: var(--danger); }
+    .creation-status.success { color: var(--success); }
+
+    .toast.success {
+      background: #1f7a42;
+    }
+
+    .toast.warning {
+      background: #996400;
+    }
+
+    .toast.danger {
+      background: #b42318;
+    }
+
+    @media (max-width: 1024px) {
+      .page {
+        min-height: auto;
+        align-items: flex-start;
+      }
+
+      .card {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 820px) {
+      body {
+        padding: 12px;
+      }
+
+      .page {
+        min-height: calc(100vh - 24px);
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .header,
+      .lookup-row,
+      .grid,
+      .section-grid,
+      .actions {
+        grid-template-columns: 1fr;
+      }
+
+      .brand {
+        min-height: 108px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .title-wrap p {
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      input,
+      select,
+      .btn {
+        min-height: 56px;
+        font-size: 17px;
+      }
+
+      .card {
+        padding: 16px;
+        border-radius: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="card" aria-label="Alta de cliente tablet">
+      <div class="header">
+        <div class="brand">
+          <img src="/img/logo.png" alt="Bachy Electrónica">
+        </div>
+        <div class="title-wrap">          
+          <h1>Alta de cliente - Reparación</h1>
+          <p>Los datos son confidenciales y están sujetos a políticas de seguridad de la información. Quien acceda a ellos asume la obligación de no divulgar, reproducir ni publicar su contenido, salvo autorización expresa</p>
+        </div>
+      </div>
+
+      <form id="clientForm" novalidate>
+        <section id="lookupSection" class="lookup-shell" aria-label="Consulta por DNI o CUIT">
+          <p class="lookup-copy">Ingresá el DNI o CUIT del cliente. Si no existe, se abre la ficha para completar el alta.</p>
+          <div class="lookup-row">
+            <div class="field">
+              <label for="lookup_dni">DNI / CUIT</label>
+              <input id="lookup_dni" inputmode="numeric" maxlength="11" autocomplete="off" placeholder="Solo números">
+            </div>
+            <button id="lookupBtn" class="btn btn-primary lookup-btn" type="button">Consultar</button>
+          </div>
+        </section>
+
+        <section id="detailsSection" class="details-shell" aria-label="Datos del cliente">
+          <div class="grid">
+            <div class="field full boot" id="bootField">
+              <label for="id_boot">Boot</label>
+              <input id="id_boot" readonly>
+            </div>
+
+            <div class="field full">
+              <label for="name">Nombre</label>
+              <input id="name" autocomplete="name" placeholder="Nombre y apellido">
+            </div>
+
+            <div class="field">
+              <label for="dni_cuit">DNI / CUIT</label>
+              <input id="dni_cuit" inputmode="numeric" maxlength="11" autocomplete="off" placeholder="Solo números, mínimo 8, máximo 11">
+            </div>
+
+            <div class="field">
+              <label for="phone">Teléfono</label>
+              <input id="phone" inputmode="tel" autocomplete="tel" placeholder="Ej: 11 1234 5678">
+            </div>
+
+            <div class="field full">
+              <label for="email">Email</label>
+              <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="nombre@ejemplo.com">
+            </div>
+
+            <div class="field full">
+              <label for="address">Dirección</label>
+              <input id="address" autocomplete="street-address" placeholder="Calle, número, barrio">
+            </div>
+            <div class="field">
+              <label for="province_id">Provincia</label>
+              <select id="province_id">
+                <option value="">-- Seleccionar provincia --</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="city_id">Ciudad</label>
+              <select id="city_id" disabled>
+                <option value="">-- Seleccionar ciudad --</option>
+              </select>
+            </div>
+
+            <section class="section-block" aria-label="Contacto adicional">
+              <div class="section-heading">
+                <label>Contacto adicional</label>
+                <span class="section-caption">Opcional</span>
+              </div>
+              <div class="section-grid">
+                <div class="field">
+                  <label for="contact_name">Nombre contacto</label>
+                  <input id="contact_name" placeholder="Nombre del contacto adicional">
+                </div>
+                <div class="field">
+                  <label for="contact_phone">Teléfono contacto</label>
+                  <input id="contact_phone" inputmode="tel" placeholder="Teléfono adicional">
+                </div>
+              </div>
+            </section>
+
+            <section class="section-block" aria-label="Datos del equipo">
+              <div class="section-heading">
+                <label>Datos del equipo</label>
+                <span class="section-caption">Para crear la orden de reparación</span>
+              </div>
+              <div class="section-grid">
+                <div class="field">
+                  <label for="device_brand_id">Marca</label>
+                  <select id="device_brand_id">
+                    <option value="">-- Seleccionar marca --</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="device_model_id">Modelo</label>
+                  <select id="device_model_id" disabled>
+                    <option value="">-- Seleccionar modelo --</option>
+                  </select>
+                </div>
+
+                <div class="field full">
+                  <label for="device_fault">Falla del equipo</label>
+                  <input id="device_fault" placeholder="Describí brevemente la falla">
+                </div>
+
+                <div class="field full">
+                  <label for="device_observations">Observaciones</label>
+                  <input id="device_observations" placeholder="Observaciones adicionales">
+                </div>
+
+                
+              </div>
+            </section>
+
+            <!-- Postal code kept as hidden input for saving, not shown on the card -->
+            <input id="postal_code" type="hidden">
+          </div>
+
+          <div id="formActions" class="actions">
+            <button id="clearBtn" class="btn btn-secondary" type="button">Limpiar</button>
+            <button id="saveBtn" class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+
+          <div id="creationStatus" class="creation-status"></div>
+          <p class="note">Campos obligatorios: nombre, DNI/CUIT, teléfono y dirección.</p>
+        </section>
+      </form>
+
+      <div id="status" class="status" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <div class="toast-wrap" aria-live="polite">
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <!-- Result modal -->
+  <div id="resultModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content" role="document">
+      <button id="modalClose" class="modal-close" aria-label="Cerrar">×</button>
+      <h2 id="modalTitle">Orden creada</h2>
+      <p id="modalBody">Detalles...</p>
+      <div class="modal-actions">
+        <button id="modalDoneBtn" class="btn btn-primary" type="button">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/qrcode.bundle.js"></script>
+  <script>
+    const api = '/api/customers.php';
+    const requiredIds = ['name', 'dni_cuit', 'phone', 'address'];
+    const form = document.getElementById('clientForm');
+    const saveBtn = document.getElementById('saveBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const lookupBtn = document.getElementById('lookupBtn');
+    const lookupDniEl = document.getElementById('lookup_dni');
+    const lookupSectionEl = document.getElementById('lookupSection');
+    const detailsSectionEl = document.getElementById('detailsSection');
+    const formActionsEl = document.getElementById('formActions');
+    const provinceEl = document.getElementById('province_id');
+    const cityEl = document.getElementById('city_id');
+    const postalEl = document.getElementById('postal_code');
+    const brandEl = document.getElementById('device_brand_id');
+    const modelEl = document.getElementById('device_model_id');
+    const deviceFaultEl = document.getElementById('device_fault');
+    const deviceObsEl = document.getElementById('device_observations');
+    const contactNameEl = document.getElementById('contact_name');
+    const contactPhoneEl = document.getElementById('contact_phone');
+    const statusEl = document.getElementById('status');
+    const toastEl = document.getElementById('toast');
+    const creationStatusEl = document.getElementById('creationStatus');
+    const bootFieldEl = document.getElementById('bootField');
+    const bootInputEl = document.getElementById('id_boot');
+    const modalDoneBtn = document.getElementById('modalDoneBtn');
+    const urlParams = new URLSearchParams(window.location.search);
+    const bootValue = urlParams.get('id_boot') || urlParams.get('idBoot') || '';
+    let provincesLoaded = false;
+    let brandsLoaded = false;
+    let toastTimer = null;
+    let currentCustomerId = null;
+    let lastCreatedRepairReceipt = null;
+
+    function showStatus(message, kind) {
+      statusEl.className = 'status' + (kind ? ' ' + kind : '');
+      statusEl.textContent = message || '';
+    }
+
+    function showToast(message, kind) {
+      toastEl.className = 'toast visible ' + (kind || 'success');
+      toastEl.textContent = message;
+      if (toastTimer) {
+        window.clearTimeout(toastTimer);
+      }
+      toastTimer = window.setTimeout(() => {
+        toastEl.className = 'toast';
+        toastEl.textContent = '';
+      }, 4200);
+    }
+
+    function showCreationStatus(message, kind) {
+      if (!creationStatusEl) return;
+      creationStatusEl.textContent = message || '';
+      creationStatusEl.className = 'creation-status' + (kind ? ' ' + kind : '');
+      if (!message) creationStatusEl.className = 'creation-status';
+    }
+
+    function showResultModal(title, body) {
+      const modal = document.getElementById('resultModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      if (!modal) return;
+      modalTitle.textContent = title || 'Resultado';
+      modalBody.textContent = body || '';
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideResultModal() {
+      const modal = document.getElementById('resultModal');
+      if (!modal) return;
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatDateTime(value) {
+      if (!value) return 'Sin definir';
+      const raw = String(value).trim();
+      const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+      const parsed = new Date(normalized);
+      if (Number.isNaN(parsed.getTime())) {
+        return raw;
+      }
+      return new Intl.DateTimeFormat('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(parsed);
+    }
+
+    function buildReceiptPayload(repairInfo) {
+      const brandText = brandEl && brandEl.selectedIndex > 0 ? brandEl.options[brandEl.selectedIndex].text : '';
+      const modelText = modelEl && modelEl.selectedIndex > 0 ? modelEl.options[modelEl.selectedIndex].text : '';
+      return {
+        orderNumber: repairInfo && repairInfo.order_number ? repairInfo.order_number : '',
+        createdAt: repairInfo && repairInfo.order_date ? repairInfo.order_date : new Date().toISOString(),
+        customerName: document.getElementById('name').value.trim(),
+        customerPhone: document.getElementById('phone').value.trim(),
+        customerEmail: document.getElementById('email').value.trim(),
+        customerAddress: document.getElementById('address').value.trim(),
+        device: [brandText, modelText].filter(Boolean).join(' '),
+        problem: deviceFaultEl.value.trim(),
+        observations: deviceObsEl.value.trim(),
+        contactName: contactNameEl.value.trim(),
+        contactPhone: contactPhoneEl.value.trim(),
+        boot: bootInputEl.value || ''
+      };
+    }
+
+    async function openRepairReceiptPrint() {
+      if (!lastCreatedRepairReceipt) {
+        showToast('Todavía no hay una orden para imprimir.', 'warning');
+        return;
+      }
+
+      const receipt = lastCreatedRepairReceipt;
+      let clientQrDataUrl = '';
+      if (window.QRCode && receipt.orderNumber) {
+        try {
+          clientQrDataUrl = await window.QRCode.toDataURL([
+            'Orden: ' + (receipt.orderNumber || ''),
+            'Cliente: ' + (receipt.customerName || ''),
+            'Ingreso: ' + formatDateTime(receipt.createdAt),
+            'Agenda: ' + formatDateTime(receipt.scheduledAt || receipt.createdAt)
+          ].join('\n'), {
+            width: 124,
+            margin: 1,
+            color: {
+              dark: '#0f172a',
+              light: '#ffffff'
+            }
+          });
+        } catch (error) {
+          clientQrDataUrl = '';
+        }
+      }
+      const popup = window.open('', '_blank', 'width=960,height=720');
+      if (!popup) {
+        showToast('Habilitá las ventanas emergentes para imprimir el comprobante.', 'warning');
+        return;
+      }
+
+      const customerContact = [receipt.contactName, receipt.contactPhone].filter(Boolean).join(' - ') || 'Sin contacto adicional';
+      const deviceDetail = receipt.device || 'Equipo no especificado';
+      const problemDetail = receipt.problem || 'Sin detalle informado';
+      const observationsDetail = receipt.observations || 'Sin observaciones';
+      const agendaDate = formatDateTime(receipt.scheduledAt || receipt.createdAt);
+      const createdDate = formatDateTime(receipt.createdAt);
+      const orderNumber = escapeHtml(receipt.orderNumber || 'Sin número');
+      const clientDisclaimer = [
+        'Presupuesto valido por 15 dias corridos.',
+        'Garantia de reparacion: 30 dias desde la entrega.',
+        'Los equipos se reciben sin accesorios, memorias ni tarjeta SIM.',
+        'Pasados 90 dias desde el aviso de retiro, no habra reclamo del equipo.',
+        'Sin este comprobante no se podra retirar ningun equipo.',
+        'SIN EXCEPCION.'
+      ].map((line) => `<li>${line}</li>`).join('');
+
+      popup.document.write(`<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Orden ${orderNumber}</title>
+  <style>
+    @page { size: A4; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #14212b; background: #fff; }
+    .sheet { width: 100%; height: 277mm; display: grid; grid-template-rows: 1fr auto 1fr; }
+    .divider { border-top: 2px dashed #94a3b8; margin: 2.5mm 0; }
+    .copy { overflow: hidden; padding: 4mm 1mm; display: flex; flex-direction: column; }
+    .copy-head { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; padding-bottom: 6px; border-bottom: 1px solid #d7e3f2; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; justify-content: flex-start; }
+    .brand img { width: 156px; height: auto; display: block; }
+    .brand-text { text-align: center; }
+    .brand-text h1 { margin: 0; font-size: 23px; line-height: 1; }
+    .brand-text p { margin: 2px 0 0; font-size: 12px; color: #526171; line-height: 1.2; }
+    .meta-side { display: flex; align-items: flex-start; gap: 10px; }
+    .qr-box { width: 84px; min-width: 84px; padding: 4px; border: 1px solid #d7e3f2; border-radius: 10px; background: #fff; }
+    .qr-box img { width: 74px; height: 74px; display: block; }
+    .order-box { min-width: 190px; padding: 8px 10px; border: 1px solid #bfd6ef; border-radius: 12px; background: #f7fbff; text-align: right; }
+    .order-box-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #0b64c8; letter-spacing: 0.06em; }
+    .order-box strong { display: block; margin-top: 4px; font-size: 24px; line-height: 1; color: #0b64c8; }
+    .order-box span { display: block; margin-top: 3px; font-size: 11px; color: #536577; }
+    .section-title { margin: 7px 0 5px; font-size: 15px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+    .data-row { padding: 2px 0; border-bottom: 1px solid #edf2f7; min-width: 0; }
+    .data-row.full { grid-column: 1 / -1; }
+    .data-row.compact { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-bottom: 0; padding-top: 3px; }
+    .field-label { display: inline; font-size: 12px; font-weight: 700; color: #334155; }
+    .field-value { display: inline; font-size: 15px; line-height: 1.26; color: #14212b; white-space: pre-wrap; word-break: break-word; }
+    .legal-box { margin-top: 6px; padding: 6px 8px; border: 1px solid #d7e3f2; border-radius: 10px; background: #fbfdff; }
+    .legal-box ul { margin: 0; padding-left: 14px; columns: 2; column-gap: 16px; }
+    .legal-box li { margin: 0 0 3px; font-size: 10.2px; line-height: 1.18; color: #475569; break-inside: avoid; }
+    .copy-foot { margin-top: auto; padding-top: 6px; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+    .signature { border-top: 1px solid #94a3b8; padding-top: 5px; font-size: 11px; color: #475569; }
+    .foot-note { font-size: 10px; color: #64748b; text-align: right; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    ${['Cliente', 'Técnico'].map((copyType, index) => `
+      <section class="copy">
+        <div class="copy-head">
+          <div class="brand">
+            <img src="${window.location.origin}/img/logo.png" alt="Bachy Electrónica">
+            <div class="brand-text">
+              <h1>Bachy Electrónica</h1>
+              <p>25 de Mayo 1116 - Trelew - Cel: 2804 857004</p>
+              <p>Espana 158 - Trelew - Cel: 2804 370838</p>
+            </div>
+          </div>
+          <div class="meta-side">
+            ${copyType === 'Cliente' && clientQrDataUrl ? `
+            <div class="qr-box">
+              <img src="${clientQrDataUrl}" alt="QR orden ${orderNumber}">
+            </div>` : ''}
+            <div class="order-box">
+              <span class="order-box-label">Orden de servicio</span>
+              <strong>${orderNumber}</strong>
+              <span>Ingreso: ${escapeHtml(createdDate)}</span>
+              <span>Agenda: ${escapeHtml(agendaDate)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="section-title">${copyType}</div>
+        <div class="data-grid">
+          <div class="data-row"><span class="field-label">Cliente:</span> <span class="field-value">${escapeHtml(receipt.customerName || 'Sin nombre')}</span></div>
+          <div class="data-row"><span class="field-label">Teléfono:</span> <span class="field-value">${escapeHtml(receipt.customerPhone || 'Sin teléfono')}</span></div>
+          <div class="data-row full"><span class="field-label">Equipo:</span> <span class="field-value">${escapeHtml(deviceDetail)}</span></div>
+          <div class="data-row full"><span class="field-label">Problema:</span> <span class="field-value">${escapeHtml(problemDetail)}</span></div>
+          <div class="data-row full"><span class="field-label">Observaciones:</span> <span class="field-value">${escapeHtml(observationsDetail)}</span></div>
+          <div class="data-row compact full">
+            <div><span class="field-label">Contacto:</span> <span class="field-value">${escapeHtml(customerContact)}</span></div>
+            <div><span class="field-label">Agenda:</span> <span class="field-value">${escapeHtml(agendaDate)}</span></div>
+          </div>
+        </div>
+        ${copyType === 'Cliente' ? `<div class="legal-box"><ul>${clientDisclaimer}</ul></div>` : ''}
+        <div class="copy-foot">
+          <div class="signature">Firma ${copyType === 'Cliente' ? 'del técnico / recepción' : 'del cliente'}</div>
+          <div class="foot-note">${copyType === 'Cliente' ? 'Presentar este comprobante al retirar.' : (receipt.boot ? `Boot: ${escapeHtml(receipt.boot)}` : 'Copia interna de servicio.')}</div>
+        </div>
+      </section>
+      ${index === 0 ? '<div class="divider"></div>' : ''}
+    `).join('')}
+  </div>
+</body>
+</html>`);
+      popup.document.close();
+      popup.focus();
+      setTimeout(function(){ try{ popup.print(); }catch(e){} }, 700);
+    }
+
+    function markInvalid(id, invalid) {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.classList.toggle('is-invalid', Boolean(invalid));
+    }
+
+    function clearInvalids() {
+      requiredIds.forEach((id) => markInvalid(id, false));
+      markInvalid('lookup_dni', false);
+    }
+
+    function resetCityState() {
+      cityEl.innerHTML = '<option value="">-- Seleccionar ciudad --</option>';
+      cityEl.disabled = true;
+      postalEl.value = '';
+    }
+
+    function toggleDetails(visible) {
+      lookupSectionEl.classList.toggle('hidden', visible);
+      detailsSectionEl.classList.toggle('visible', visible);
+      formActionsEl.classList.toggle('visible', visible);
+    }
+
+    async function populateCustomerForm(customer) {
+      const normalizedCustomer = customer || {};
+      document.getElementById('name').value = normalizedCustomer.name || '';
+      document.getElementById('dni_cuit').value = normalizedCustomer.dni_cuit || lookupDniEl.value || '';
+      document.getElementById('phone').value = normalizedCustomer.phone || '';
+      document.getElementById('email').value = normalizedCustomer.email || '';
+      document.getElementById('address').value = normalizedCustomer.address || '';
+
+      // contact fields
+      contactNameEl.value = normalizedCustomer.contact_name || '';
+      contactPhoneEl.value = normalizedCustomer.contact_phone || '';
+
+      const provinceId = normalizedCustomer.province_id ? String(normalizedCustomer.province_id) : '';
+      const cityId = normalizedCustomer.city_id ? String(normalizedCustomer.city_id) : '';
+      provinceEl.value = provinceId;
+      if (provinceId) {
+        await loadCities(provinceId, cityId || null);
+      } else {
+        resetCityState();
+      }
+      if (!cityId) {
+        postalEl.value = normalizedCustomer.postal_code || '';
+      }
+
+      if (bootValue || normalizedCustomer.id_boot) {
+        bootFieldEl.style.display = '';
+        bootInputEl.value = normalizedCustomer.id_boot || bootValue;
+      } else {
+        bootFieldEl.style.display = 'none';
+        bootInputEl.value = '';
+      }
+
+      // device fields: try to populate brand/model if present on customer record
+      try {
+        await ensureBrandsLoaded();
+        const b = normalizedCustomer.device_brand_id ? String(normalizedCustomer.device_brand_id) : '';
+        const m = normalizedCustomer.device_model_id ? String(normalizedCustomer.device_model_id) : '';
+        brandEl.value = b;
+        if (b) {
+          await loadModels(b, m || null);
+        } else {
+          modelEl.innerHTML = '<option value="">-- Seleccionar modelo --</option>';
+          modelEl.disabled = true;
+        }
+      } catch (e) {
+        // ignore load errors
+      }
+    }
+
+    function resetForm(options) {
+      const preserveReceipt = options && options.preserveReceipt;
+      form.reset();
+      currentCustomerId = null;
+      clearInvalids();
+      resetCityState();
+      // reset contact and device fields
+      if (brandEl) {
+        brandEl.innerHTML = '<option value="">-- Seleccionar marca --</option>';
+      }
+      if (modelEl) {
+        modelEl.innerHTML = '<option value="">-- Seleccionar modelo --</option>';
+        modelEl.disabled = true;
+      }
+      // ensure brands will be reloaded after clearing
+      brandsLoaded = false;
+      if (contactNameEl) contactNameEl.value = '';
+      if (contactPhoneEl) contactPhoneEl.value = '';
+      if (deviceFaultEl) deviceFaultEl.value = '';
+      if (deviceObsEl) deviceObsEl.value = '';
+      
+      if (!preserveReceipt) {
+        lastCreatedRepairReceipt = null;
+      }
+      toggleDetails(false);
+      showStatus('', '');
+      bootFieldEl.style.display = 'none';
+      bootInputEl.value = '';
+      saveBtn.textContent = 'Guardar';
+      lookupBtn.disabled = false;
+      lookupBtn.textContent = 'Consultar';
+      lookupDniEl.value = '';
+      lookupDniEl.focus();
+    }
+
+    async function ensureProvincesLoaded() {
+      if (provincesLoaded) return;
+      const response = await fetch('/api/provinces.php', { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('No se pudieron cargar las provincias');
+      }
+      const provinces = await response.json();
+      provinceEl.innerHTML = '<option value="">-- Seleccionar provincia --</option>';
+      for (const province of provinces || []) {
+        const option = document.createElement('option');
+        option.value = province.id;
+        option.textContent = province.name;
+        provinceEl.appendChild(option);
+      }
+      provincesLoaded = true;
+    }
+
+    async function ensureBrandsLoaded() {
+      if (brandsLoaded) return;
+      const response = await fetch('/api/brands.php', { cache: 'no-store' });
+      if (!response.ok) throw new Error('No se pudieron cargar las marcas');
+      const brands = await response.json();
+      brandEl.innerHTML = '<option value="">-- Seleccionar marca --</option>';
+      for (const b of brands || []) {
+        const option = document.createElement('option');
+        option.value = b.id;
+        option.textContent = b.name;
+        brandEl.appendChild(option);
+      }
+      brandsLoaded = true;
+    }
+
+    async function loadModels(brandId, selectedModelId) {
+      modelEl.innerHTML = '<option value="">-- Seleccionar modelo --</option>';
+      modelEl.disabled = true;
+      if (!brandId) return;
+      const response = await fetch('/api/models.php?brand_id=' + encodeURIComponent(brandId), { cache: 'no-store' });
+      if (!response.ok) throw new Error('No se pudieron cargar los modelos');
+      const models = await response.json();
+      for (const m of models || []) {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.name;
+        modelEl.appendChild(option);
+      }
+      modelEl.disabled = false;
+      if (selectedModelId) modelEl.value = String(selectedModelId);
+    }
+
+    async function loadCities(provinceId, selectedCityId) {
+      resetCityState();
+      if (!provinceId) {
+        return;
+      }
+      const response = await fetch('/api/cities.php?province_id=' + encodeURIComponent(provinceId), { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('No se pudieron cargar las ciudades');
+      }
+      const cities = await response.json();
+      for (const city of cities || []) {
+        const option = document.createElement('option');
+        option.value = city.id;
+        option.textContent = city.name;
+        if (city.postal_code) {
+          option.dataset.postal = city.postal_code;
+        }
+        cityEl.appendChild(option);
+      }
+      cityEl.disabled = false;
+      if (selectedCityId) {
+        cityEl.value = String(selectedCityId);
+        updatePostalCode();
+      }
+    }
+
+    function updatePostalCode() {
+      const option = cityEl.options[cityEl.selectedIndex];
+      postalEl.value = option && option.dataset.postal ? option.dataset.postal : '';
+    }
+
+    function getPayload() {
+      const dniEl = document.getElementById('dni_cuit');
+      dniEl.value = String(dniEl.value || '').replace(/\D/g, '');
+      return {
+        name: document.getElementById('name').value.trim(),
+        dni_cuit: dniEl.value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        contact_name: contactNameEl.value.trim() || null,
+        contact_phone: contactPhoneEl.value.trim() || null,
+        email: document.getElementById('email').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        province_id: provinceEl.value || null,
+        city_id: cityEl.value || null,
+        postal_code: postalEl.value || null,
+        device_brand_id: brandEl.value || null,
+        device_model_id: modelEl.value || null,
+        device_fault: deviceFaultEl.value.trim() || null,
+        device_observations: deviceObsEl.value.trim() || null,
+        id_boot: bootInputEl.value || null
+      };
+    }
+
+    function validatePayload(payload) {
+      clearInvalids();
+      const invalidIds = [];
+      for (const id of requiredIds) {
+        if (!payload[id]) {
+          invalidIds.push(id);
+        }
+      }
+      if (payload.dni_cuit && !/^\d{8,11}$/.test(payload.dni_cuit)) {
+        invalidIds.push('dni_cuit');
+      }
+      if (invalidIds.length) {
+        const uniqueInvalidIds = [...new Set(invalidIds)];
+        uniqueInvalidIds.forEach((id) => markInvalid(id, true));
+        document.getElementById(uniqueInvalidIds[0]).focus();
+        if (uniqueInvalidIds.includes('dni_cuit') && payload.dni_cuit && !/^\d{8,11}$/.test(payload.dni_cuit)) {
+          showStatus('DNI/CUIT inválido. Ingresá solo números entre 8 y 11 caracteres.', 'error');
+        } else {
+          showStatus('Completá los campos obligatorios para continuar.', 'error');
+        }
+        return false;
+      }
+      showStatus('', '');
+      return true;
+    }
+
+    async function checkExistingCustomer(dni) {
+      const response = await fetch(api + '?dni=' + encodeURIComponent(dni), { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('No se pudo validar el DNI/CUIT');
+      }
+      return response.json();
+    }
+
+    async function saveCustomer(payload) {
+      const requestUrl = currentCustomerId ? api + '?id=' + encodeURIComponent(currentCustomerId) : api;
+      const response = await fetch(requestUrl, {
+        method: currentCustomerId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || 'Error guardando cliente');
+      }
+      return body;
+    }
+
+    async function handleLookup() {
+      const lookupDni = String(lookupDniEl.value || '').replace(/\D/g, '');
+      lookupDniEl.value = lookupDni;
+      markInvalid('lookup_dni', false);
+
+      if (!/^\d{8,11}$/.test(lookupDni)) {
+        markInvalid('lookup_dni', true);
+        showStatus('Ingresá solo números entre 8 y 11 caracteres para consultar.', 'error');
+        lookupDniEl.focus();
+        return;
+      }
+
+      lookupBtn.disabled = true;
+      lookupBtn.textContent = 'Consultando...';
+      showStatus('Buscando cliente...', '');
+
+      try {
+        await ensureProvincesLoaded();
+        await ensureBrandsLoaded();
+        const existing = await checkExistingCustomer(lookupDni);
+
+        currentCustomerId = existing && existing.id ? Number(existing.id) : null;
+        await populateCustomerForm(existing || { dni_cuit: lookupDni, id_boot: bootValue || null });
+        toggleDetails(true);
+
+        if (currentCustomerId) {
+          showStatus('Cliente encontrado. Revisá los datos y guardá si necesitás actualizarlos.', 'success');
+          showToast('Se cargaron los datos del cliente.', 'success');
+        } else {
+          showStatus('No existe un cliente con ese DNI/CUIT. Completá los datos y guardá.', '');
+        }
+
+        document.getElementById('name').focus();
+      } catch (error) {
+        showStatus(error.message || 'No se pudo consultar el DNI/CUIT.', 'error');
+      } finally {
+        lookupBtn.disabled = false;
+        lookupBtn.textContent = 'Consultar';
+      }
+    }
+
+    provinceEl.addEventListener('change', async (event) => {
+      showStatus('', '');
+      try {
+        await loadCities(event.target.value || null, null);
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    });
+
+    brandEl.addEventListener('change', async (event) => {
+      showStatus('', '');
+      try {
+        await loadModels(event.target.value || null, null);
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    });
+
+    cityEl.addEventListener('change', updatePostalCode);
+
+    document.getElementById('dni_cuit').addEventListener('input', (event) => {
+      event.target.value = String(event.target.value || '').replace(/\D/g, '');
+      markInvalid('dni_cuit', false);
+      if (statusEl.classList.contains('error')) {
+        showStatus('', '');
+      }
+    });
+
+    lookupDniEl.addEventListener('input', (event) => {
+      event.target.value = String(event.target.value || '').replace(/\D/g, '');
+      markInvalid('lookup_dni', false);
+      if (statusEl.classList.contains('error')) {
+        showStatus('', '');
+      }
+    });
+
+    lookupBtn.addEventListener('click', handleLookup);
+
+    requiredIds.forEach((id) => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.addEventListener('input', () => {
+        markInvalid(id, false);
+        if (statusEl.classList.contains('error')) {
+          showStatus('', '');
+        }
+      });
+    });
+
+    clearBtn.addEventListener('click', resetForm);
+    if (modalDoneBtn) modalDoneBtn.addEventListener('click', hideResultModal);
+    const modalOverlayEl = document.getElementById('modalOverlay');
+    if (modalOverlayEl) modalOverlayEl.addEventListener('click', hideResultModal);
+    const modalCloseEl = document.getElementById('modalClose');
+    if (modalCloseEl) modalCloseEl.addEventListener('click', hideResultModal);
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      if (!detailsSectionEl.classList.contains('visible')) {
+        await handleLookup();
+        return;
+      }
+
+      const payload = getPayload();
+      if (!validatePayload(payload)) {
+        return;
+      }
+
+      saveBtn.disabled = true;
+      clearBtn.disabled = true;
+      saveBtn.textContent = 'Guardando...';
+      showStatus('Validando datos...', '');
+
+      try {
+        const isUpdate = Boolean(currentCustomerId);
+        const existing = currentCustomerId ? null : await checkExistingCustomer(payload.dni_cuit);
+        if (existing) {
+          markInvalid('dni_cuit', true);
+          document.getElementById('dni_cuit').focus();
+          showStatus('Ya existe un cliente con ese DNI/CUIT.', 'error');
+          showToast('Ese DNI/CUIT ya está registrado a nombre de ' + (existing.name || 'otro cliente') + '.', 'warning');
+          return;
+        }
+
+        // save or update customer
+        const savedCustomer = await saveCustomer(payload);
+        // determine customer id
+        const customerId = (savedCustomer && savedCustomer.id) ? Number(savedCustomer.id) : currentCustomerId;
+        currentCustomerId = customerId;
+
+        // create device if brand/model or fault/observations provided
+        let deviceId = null;
+        try {
+          const brandText = brandEl && brandEl.value ? (brandEl.options[brandEl.selectedIndex] && brandEl.options[brandEl.selectedIndex].text) : null;
+          const modelText = modelEl && modelEl.value ? (modelEl.options[modelEl.selectedIndex] && modelEl.options[modelEl.selectedIndex].text) : null;
+          const notes = deviceObsEl ? deviceObsEl.value.trim() : '';
+          if (customerId && (brandEl && brandEl.value || modelEl && modelEl.value || notes || (deviceFaultEl && deviceFaultEl.value.trim()))) {
+            const resp = await fetch('/api/devices.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json;charset=utf-8' },
+              body: JSON.stringify({ customer_id: customerId, brand: brandText || null, model: modelText || null, notes: notes || null })
+            });
+            if (resp.ok) {
+              const body = await resp.json().catch(()=>({}));
+              deviceId = body && body.id ? Number(body.id) : null;
+            }
+          }
+        } catch (e) { /* ignore device errors */ }
+
+        // create repair order
+        let repairInfo = null;
+        try {
+          const problem = deviceFaultEl ? deviceFaultEl.value.trim() : '';
+          const contact = contactNameEl && contactNameEl.value ? contactNameEl.value.trim() : (contactPhoneEl && contactPhoneEl.value ? contactPhoneEl.value.trim() : null);
+          const resp2 = await fetch('/api/repairs.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json;charset=utf-8' },
+            body: JSON.stringify({ customer_id: customerId || null, device_id: deviceId || null, device_model: (modelEl && modelEl.options[modelEl.selectedIndex] && modelEl.options[modelEl.selectedIndex].text) || null, problem: problem || null, status: 'pending', contact: contact || null })
+          });
+          if (resp2.ok) {
+            repairInfo = await resp2.json().catch(()=>null);
+          }
+        } catch (e) { /* ignore repair creation errors */ }
+
+        showToast(isUpdate ? 'Cliente actualizado correctamente.' : 'Cliente creado correctamente.', 'success');
+
+        // show popup with repair details if created
+        if (repairInfo && (repairInfo.order_number || repairInfo.id)) {
+          const ord = repairInfo.order_number || ('#' + (repairInfo.id || ''));
+          const dt = repairInfo.order_date || new Date().toISOString();
+          lastCreatedRepairReceipt = buildReceiptPayload(repairInfo);
+          showResultModal('Orden creada: ' + ord, 'Fecha: ' + dt);
+          showCreationStatus('Orden creada: ' + ord, 'success');
+          // open/refresh repairs listing in a named window so it reloads if already open
+          window.open('/admin/repairs.html', 'repairs');
+        } else {
+          // repair creation failed or not returned
+          if (!repairInfo) {
+            showCreationStatus('Error: no se pudo crear la orden de reparación.', 'error');
+          }
+        }
+
+        // reset form for next entry
+        resetForm({ preserveReceipt: true });
+        showStatus(isUpdate ? 'Actualización completada. Podés consultar otro cliente.' : 'Alta completada. Podés consultar el siguiente cliente.', 'success');
+      } catch (error) {
+        showStatus(error.message || 'Error guardando cliente.', 'error');
+        showToast(error.message || 'Error guardando cliente.', 'danger');
+      } finally {
+        saveBtn.disabled = false;
+        clearBtn.disabled = false;
+        saveBtn.textContent = 'Guardar cliente';
+      }
+    });
+
+    (async function init() {
+      try {
+        await ensureProvincesLoaded();
+        await ensureBrandsLoaded();
+        resetForm();
+      } catch (error) {
+        showStatus(error.message, 'error');
+      }
+    })();
+  </script>
+</body>
+</html>
