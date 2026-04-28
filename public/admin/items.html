@@ -15,6 +15,18 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h1 class="h4">Artículos</h1>
       <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <select id="filterType" class="form-select form-select-sm" style="width:140px">
+            <option value="">Filtrar...</option>
+            <option value="brand">Marca</option>
+            <option value="model">Modelo</option>
+            <option value="category">Rubro</option>
+          </select>
+          <select id="filterValue" class="form-select form-select-sm" style="min-width:200px">
+            <option value="">Seleccionar...</option>
+          </select>
+          <button id="btnClearFilter" class="btn btn-outline-secondary btn-sm" title="Limpiar filtro">Limpiar</button>
+        </div>
         <button id="btnNew" class="btn btn-success">Nuevo artículo</button>
       </div>
     </div>
@@ -161,20 +173,45 @@
       return token ? { Authorization: 'Bearer ' + token } : {};
     }
 
+    // filtro cliente: estado actual
+    let currentFilterType = '';
+    let currentFilterValue = '';
+
+    async function populateFilterValues(type){
+      const sel = document.getElementById('filterValue');
+      if(!sel) return;
+      sel.innerHTML = '<option value="">Seleccionar...</option>';
+      try{
+        if(!type) return;
+        let url = '/api/brands.php?all=1';
+        if(type === 'model') url = '/api/models.php?all=1';
+        if(type === 'category') url = '/api/categories.php?all=1';
+        const res = await axios.get(url, { headers: getAuth() });
+        (res.data||[]).forEach(o=>{ const el = document.createElement('option'); el.value = o.id; el.text = o.name; sel.appendChild(el); });
+      }catch(e){ /* silencioso */ }
+    }
+
     async function load(){
       try{
         const res = await axios.get(api + '?all=1', { headers: getAuth() });
         const tbody = document.querySelector('#listTable tbody'); tbody.innerHTML = '';
-        (res.data || []).forEach(r => {
-          const include = (typeof r.active === 'undefined') || (r.active==1);
-          if(!include) return;
+        const items = (res.data || []).filter(r => { return (typeof r.active === 'undefined') || (r.active==1); });
+
+        const filtered = items.filter(r => {
+          if(!currentFilterType || !currentFilterValue) return true;
+          if(currentFilterType === 'brand') return (r.brand_id == currentFilterValue || r.brand_id === currentFilterValue);
+          if(currentFilterType === 'model') return (r.model_id == currentFilterValue || r.model_id === currentFilterValue);
+          if(currentFilterType === 'category') return (r.category_id == currentFilterValue || r.category_id === currentFilterValue);
+          return true;
+        });
+
+        filtered.forEach(r => {
           const tr = document.createElement('tr');
           const tdId = document.createElement('td'); tdId.textContent = r.id;
           const tdName = document.createElement('td'); tdName.innerHTML = escapeHtml(r.name || '');
           const tdBrand = document.createElement('td'); tdBrand.innerHTML = escapeHtml(r.brand_name || '');
           const tdModel = document.createElement('td'); tdModel.innerHTML = escapeHtml(r.model_name || '');
           const tdCategory = document.createElement('td'); tdCategory.innerHTML = escapeHtml(r.category_name || '');
-          // prices intentionally hidden in list view per UI requirement
           const tdActions = document.createElement('td'); tdActions.className = 'text-end';
           const wrap = document.createElement('div'); wrap.className = 'd-flex justify-content-end gap-2';
           const btnEdit = document.createElement('button'); btnEdit.className = 'btn btn-sm btn-primary btn-action btn-edit'; btnEdit.dataset.id = r.id; btnEdit.textContent = 'Editar';
@@ -186,6 +223,26 @@
       }catch(e){
         showToast('Error cargando artículos', 'danger');
       }
+    }
+
+    // eventos para controles de filtro
+    const filterTypeEl = document.getElementById('filterType');
+    const filterValueEl = document.getElementById('filterValue');
+    const btnClearFilter = document.getElementById('btnClearFilter');
+    if(filterTypeEl){
+      filterTypeEl.addEventListener('change', async (e)=>{
+        currentFilterType = e.target.value || '';
+        currentFilterValue = '';
+        await populateFilterValues(currentFilterType);
+        if(filterValueEl) filterValueEl.value = '';
+        load();
+      });
+    }
+    if(filterValueEl){
+      filterValueEl.addEventListener('change', (e)=>{ currentFilterValue = e.target.value || ''; load(); });
+    }
+    if(btnClearFilter){
+      btnClearFilter.addEventListener('click', ()=>{ currentFilterType = ''; currentFilterValue = ''; if(filterTypeEl) filterTypeEl.value=''; if(filterValueEl) filterValueEl.innerHTML = '<option value="">Seleccionar...</option>'; load(); });
     }
 
     document.getElementById('btnNew').addEventListener('click', () => {

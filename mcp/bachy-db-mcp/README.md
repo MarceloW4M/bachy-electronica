@@ -61,6 +61,25 @@ Herramientas opcionales de escritura
 - `create_invoice`
 - `upsert_stock`
 
+Herramientas de escritura nuevas
+- `update_repair`: actualiza campos de una reparación existente (reagendar, reasignar técnico, cambiar estado).
+- `delete_repair`: elimina una reparación existente.
+
+Ejemplo `update_repair` (para reagendar):
+```json
+{
+	"repair_id": 789,
+	"scheduled_at": "2026-05-05 15:00:00",
+	"technician_id": 9,
+	"status": "scheduled"
+}
+```
+
+Ejemplo `delete_repair`:
+```json
+{ "repair_id": 789 }
+```
+
 Estas herramientas de escritura solo aparecen si defines `MCP_ENABLE_WRITES=true`.
 Además, solo se exponen las que pongas explícitamente en `MCP_ALLOWED_WRITE_TOOLS`.
 

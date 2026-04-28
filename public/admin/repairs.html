@@ -18,7 +18,7 @@
             <h1 class="h4">Reparaciones</h1>
             <div>
               <button id="btnNew" type="button" class="btn btn-primary">Nueva orden de reparación</button>
-              <button id="btnReports" type="button" class="btn btn-outline-secondary ms-2">Informes (Completadas)</button>
+              <button id="btnReports" type="button" class="btn btn-outline-secondary ms-2">Informes (Terminadas)</button>
               <button id="btnTablet" type="button" class="btn btn-outline-dark ms-2">Tablet</button>
             </div>
           </div>
@@ -33,7 +33,7 @@
                   <div id="filterCustomerSuggestions" class="list-group position-absolute" style="z-index:1200; display:none; max-height:200px; overflow:auto;"></div>
                 </div>
                 <div class="col-auto" style="min-width:180px;"><label class="form-label">Nº Orden</label><input id="filterOrderNumber" class="form-control" placeholder="ORD-000001 o parte..." /></div>
-                <div class="col-auto" style="min-width:160px;"><label class="form-label">Estado</label><select id="filterStatus" class="form-select"><option value="">(Todos - por defecto oculta Completadas)</option><option value="all">Todos (incluye Completadas)</option><option value="received">Recibida</option><option value="en reparacion">En reparación</option><option value="pending">Pendiente</option><option value="completada">Completada</option></select></div>
+                <div class="col-auto" style="min-width:160px;"><label class="form-label">Estado</label><select id="filterStatus" class="form-select"><option value="">(Todos - por defecto oculta Terminadas)</option><option value="all">Todos (incluye Terminadas)</option><option value="received">Recibida</option><option value="en reparacion">En reparación</option><option value="pending">Pendiente</option><option value="terminado">Terminada</option></select></div>
                 <div class="col-auto"><button id="btnFilter" class="btn btn-outline-primary">Filtrar</button> <button id="btnClearFilter" class="btn btn-light">Limpiar</button></div>
               </div>
             </div>
@@ -94,15 +94,28 @@
               <input id="repairCustomerId" type="hidden" />
               <div id="repairCustomerSuggestions" class="list-group position-absolute w-100" style="z-index:1200; display:none; max-height:200px; overflow:auto;"></div>
             </div>
+            <div class="row">
+              <div class="col-md-6 mb-3"><label class="form-label">Marca</label>
+                <select id="repairBrandSelect" class="form-select"><option value="">Seleccionar marca...</option></select>
+              </div>
+              <div class="col-md-6 mb-3"><label class="form-label">Modelo</label>
+                <select id="repairModelSelect" class="form-select" disabled><option value="">Seleccionar modelo...</option></select>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Dispositivo</label>
+              <select id="repairDeviceSelect" class="form-select" disabled><option value="">Seleccionar dispositivo...</option></select>
+            </div>
             <div class="mb-3">
               <label class="form-label">Técnico</label>
               <select id="repairTechSelect" class="form-select"><option value="">Seleccionar técnico...</option></select>
             </div>
-            <div class="mb-3"><label class="form-label">Estado</label><select id="repairStatus" class="form-select"><option value="en reparacion">En reparación</option><option value="received">Recibida</option><option value="pending">Pendiente</option><option value="completada">Completada</option></select></div>
-            <div class="mb-3"><label class="form-label">Detalle del problema</label><textarea id="repairProblem" class="form-control" rows="3"></textarea></div>
+            <div class="mb-3"><label class="form-label">Estado</label><select id="repairStatus" class="form-select"><option value="en reparacion">En reparación</option><option value="received">Recibida</option><option value="pending">Pendiente</option><option value="terminado">Terminada</option></select></div>
+            <div class="mb-3"><label class="form-label">Detalle del problema</label><textarea id="repairProblem" class="form-control" rows="2"></textarea></div>
             <div class="mb-3"><label class="form-label">Contacto adicional - Nombre completo</label><input id="repairContactName" class="form-control" placeholder="Nombre completo del contacto" /></div>
             <div class="mb-3"><label class="form-label">Contacto adicional - Teléfono</label><input id="repairContactPhone" class="form-control" placeholder="Número de teléfono" /></div>
             <div class="mb-3"><label class="form-label">Fecha de reparación (para agendar)</label><input id="repairDate" class="form-control" type="datetime-local"></div>
+            <div class="mb-3"><label class="form-label">Presupuesto estimado</label><input id="repairEstimate" class="form-control" type="text" placeholder="Detalle estimativo y precio (texto libre)" /></div>
           </form>
         </div>
         <div class="modal-footer">
@@ -156,6 +169,7 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
           <button id="reportSave" class="btn btn-success">Guardar informe</button>
+          <button id="reportDownload" class="btn btn-info">Descargar PDF</button>
           <button id="reportPrint" class="btn btn-primary">Imprimir informe</button>
         </div>
       </div>
@@ -186,6 +200,7 @@
   <script src="/js/qrcode.bundle.js"></script>
   <script src="/js/admin-utils.js"></script>
   <script src="/js/admin-nav-active.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
     // logout handler
     document.addEventListener('DOMContentLoaded', ()=>{
@@ -380,8 +395,6 @@
       ${copyType === 'Cliente' ? `<div class="legal-box"><ul>${clientDisclaimer}</ul></div>` : ''}
       <div class="copy-foot">
         <div class="signature">Firma ${copyType === 'Cliente' ? 'del técnico / recepción' : 'del cliente'}</div>
-        <div class="foot-note">${copyType === 'Cliente' ? 'Presentar este comprobante al retirar.' : 'Copia interna de servicio.'}</div>
-      </div>
     </section>
     ${index === 0 ? '<div class="divider"></div>' : ''}`).join('')}
   </div>
@@ -476,7 +489,14 @@
     function showRepairCustomerSuggestions(items){
       rSuggBox.innerHTML=''; if(!items||items.length===0){ hideRepairCustomerSuggestions(); return; }
       items.forEach(it=>{ const a=document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action'; a.textContent = it.name + (it.phone?(' — '+it.phone):''); a.dataset.id = it.id; a.addEventListener('click', async (ev)=>{ ev.preventDefault(); document.getElementById('repairCustomerId').value = it.id; document.getElementById('repairCustomerSearch').value = a.textContent; hideRepairCustomerSuggestions(); // load devices for this customer
-          try{ const devRes = await axios.get('/api/devices.php?customer_id='+it.id, { headers: getAuthHeaders() }); const dsel=document.getElementById('repairDeviceSelect'); dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; (devRes.data||[]).forEach(d=>{ const opt=document.createElement('option'); opt.value=d.id; opt.text=(d.brand||'')+' '+(d.model||'')+(d.serial?(' — '+d.serial):''); dsel.appendChild(opt); }); dsel.disabled = false; }catch(e){}
+          try{
+            const devRes = await axios.get('/api/devices.php?customer_id='+it.id, { headers: getAuthHeaders() });
+            const dsel=document.getElementById('repairDeviceSelect'); dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>';
+            (devRes.data||[]).forEach(d=>{ const opt=document.createElement('option'); opt.value=d.id; opt.text=(d.brand||'')+' '+(d.model||'')+(d.serial?(' — '+d.serial):''); dsel.appendChild(opt); });
+            dsel.disabled = false;
+            // Build brand->models map from this customer's devices and populate brand/model selects
+            await loadBrandsForCustomer(it.id, devRes.data || []);
+          }catch(e){}
           // fetch full customer details to prefill contact fields
           try{ const c = (await axios.get('/api/customers.php?id='+it.id, { headers: getAuthHeaders() })).data || {}; document.getElementById('repairContactName').value = c.contact_name || ''; document.getElementById('repairContactPhone').value = c.contact_phone || c.phone || ''; }catch(e){}
         }); rSuggBox.appendChild(a); }); rSuggBox.style.display='block'; }
@@ -499,12 +519,119 @@
           repairDeviceSelect.innerHTML = '<option value="">Seleccionar dispositivo...</option>';
           (devRes.data||[]).forEach(d=>{ const opt = document.createElement('option'); opt.value = d.id; opt.text = (d.brand||'') + ' ' + (d.model||'') + (d.serial?(' — '+d.serial):''); repairDeviceSelect.appendChild(opt); });
           repairDeviceSelect.disabled = false;
+          // also populate brand/model selects using these devices (fallback when user didn't pick suggestion)
+          try{ await loadBrandsForCustomer(cid, devRes.data || []); }catch(e){}
         }catch(e){ repairDeviceSelect.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; repairDeviceSelect.disabled = true; }
+      });
+    }
+
+    // Load brands into repair modal brand select
+    async function loadRepairBrands(){
+      try{
+        const sel = document.getElementById('repairBrandSelect');
+        if(!sel) return;
+        sel.innerHTML = '<option value="">Seleccionar marca...</option>';
+        const res = await axios.get('/api/brands.php?all=1', { headers: getAuthHeaders() });
+        (res.data || []).forEach(b => { const o = document.createElement('option'); o.value = b.id; o.text = b.name; sel.appendChild(o); });
+        // try to leave model select cleared
+        const msel = document.getElementById('repairModelSelect'); if(msel){ msel.innerHTML = '<option value="">Seleccionar modelo...</option>'; msel.disabled = true; }
+      }catch(e){ /* ignore */ }
+    }
+
+    // When brand changes, load models for that brand
+    const repairBrandSel = document.getElementById('repairBrandSelect');
+    if(repairBrandSel){
+      repairBrandSel.addEventListener('change', async (e)=>{
+        const bid = e.target.value;
+        const msel = document.getElementById('repairModelSelect');
+        if(!msel) return;
+        msel.innerHTML = '<option value="">Seleccionar modelo...</option>';
+        if(!bid){ msel.disabled = true; return; }
+        try{
+          // Prefer models from customer-specific device map if present
+          const cid = document.getElementById('repairCustomerId').value || null;
+          if(cid && customerDeviceBrandMap[cid] && customerDeviceBrandMap[cid][bid]){
+            const models = customerDeviceBrandMap[cid][bid].models || [];
+            models.forEach(m => { const o = document.createElement('option'); o.value = m.model_id || m.name; o.text = m.name; msel.appendChild(o); });
+            msel.disabled = false;
+          } else {
+            const res = await axios.get('/api/models.php?brand_id='+encodeURIComponent(bid), { headers: getAuthHeaders() });
+            (res.data || []).forEach(m => { const o = document.createElement('option'); o.value = m.id; o.text = m.name; msel.appendChild(o); });
+            msel.disabled = false;
+          }
+        }catch(e){ msel.disabled = true; }
+      });
+    }
+
+    // Map of customerId => { brandKey: { brand_id, brand_name, models: [{model_id, name}] } }
+    const customerDeviceBrandMap = {};
+
+    // Build and populate brand/model selects using devices list for a customer
+    async function loadBrandsForCustomer(customerId, devices){
+      try{
+        const devs = devices || [];
+        if(!devices || !devices.length){
+          const res = await axios.get('/api/devices.php?customer_id='+encodeURIComponent(customerId), { headers: getAuthHeaders() });
+          devs.push(...(res.data || []));
+        }
+        const map = {};
+        devs.forEach(d => {
+          // only include devices that belong to this customer
+          if(String(d.customer_id || '') !== String(customerId)) return;
+          const brand_id = (d.brand_id !== undefined && d.brand_id !== null) ? d.brand_id : null;
+          const brand_name = d.brand || d.brand_name || '';
+          const brandKey = brand_id ? String(brand_id) : ('bname:'+brand_name);
+          if(!map[brandKey]) map[brandKey] = { brand_id: brand_id, brand_name: brand_name, models: [], devices: [] };
+          const modelName = d.model || d.model_name || '';
+          const modelObj = { model_id: (d.model_id !== undefined && d.model_id !== null) ? d.model_id : null, name: modelName };
+          // avoid duplicates models
+          if(modelName && !map[brandKey].models.find(x => x.name === modelObj.name && String(x.model_id) === String(modelObj.model_id))){ map[brandKey].models.push(modelObj); }
+          // store device reference
+          map[brandKey].devices.push(d);
+        });
+        customerDeviceBrandMap[customerId] = map;
+        // populate brand select
+        const brandSel = document.getElementById('repairBrandSelect');
+        const modelSel = document.getElementById('repairModelSelect');
+        if(!brandSel) return;
+        brandSel.innerHTML = '<option value="">Seleccionar marca...</option>';
+        Object.keys(map).forEach(key => { const b = map[key]; const o = document.createElement('option'); o.value = key; o.text = b.brand_name || ('Marca ' + key); brandSel.appendChild(o); });
+        if(modelSel){ modelSel.innerHTML = '<option value="">Seleccionar modelo...</option>'; modelSel.disabled = true; }
+      }catch(e){ /* ignore */ }
+    }
+
+    // When model is selected, populate device select with devices matching customer, brand and model
+    const repairModelSelect = document.getElementById('repairModelSelect');
+    if(repairModelSelect){
+      repairModelSelect.addEventListener('change', (e)=>{
+        try{
+          const mval = e.target.value;
+          const brandKey = document.getElementById('repairBrandSelect').value;
+          const cid = document.getElementById('repairCustomerId').value || null;
+          const dsel = document.getElementById('repairDeviceSelect');
+          if(!dsel) return;
+          dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>';
+          if(!cid || !brandKey || !mval){ dsel.disabled = true; return; }
+          const map = customerDeviceBrandMap[cid] || {};
+          const entry = map[brandKey];
+          if(!entry || !entry.devices || !entry.devices.length){ dsel.disabled = true; return; }
+          // filter devices by model name (match text)
+          const matches = entry.devices.filter(dev => {
+            const devModel = (dev.model || dev.model_name || '').trim();
+            // model option value may be id or name; try to match by id first
+            if(String(mval).match(/^\d+$/) && dev.model_id && String(dev.model_id) === String(mval)) return true;
+            return devModel === String(mval) || ('mname:'+devModel) === String(mval);
+          });
+          matches.forEach(d => { const opt = document.createElement('option'); opt.value = d.id; opt.text = (d.brand||'') + ' ' + (d.model||d.model_name||'') + (d.serial?(' — '+d.serial):''); dsel.appendChild(opt); });
+          dsel.disabled = matches.length === 0;
+        }catch(e){ /* ignore */ }
       });
     }
 
     // initial loads
     loadTechnicians();
+    // load brand/model lists for repair modal
+    loadRepairBrands();
     if(printRepairReceiptBtn) printRepairReceiptBtn.addEventListener('click', openRepairReceiptPrint);
 
     if(tabletQrModalEl){
@@ -543,12 +670,12 @@
       // disabling 'Informes' toggle when applying manual filters
       loadRepairs(filters);
       try{ if(window.reportsFilterActive !== undefined) window.reportsFilterActive = false; }catch(e){}
-      try{ const _br = document.getElementById('btnReports'); if(_br){ _br.classList.remove('btn-secondary'); _br.classList.add('btn-outline-secondary'); _br.textContent='Informes (Completadas)'; } }catch(e){}
+      try{ const _br = document.getElementById('btnReports'); if(_br){ _br.classList.remove('btn-secondary'); _br.classList.add('btn-outline-secondary'); _br.textContent='Informes (Terminadas)'; } }catch(e){}
     });
     document.getElementById('btnClearFilter').addEventListener('click', ()=>{
       document.getElementById('filterCustomerId').value=''; document.getElementById('filterCustomerSearch').value=''; document.getElementById('filterOrderNumber').value=''; document.getElementById('filterStatus').value=''; hideFilterCustomerSuggestions(); loadRepairs();
       try{ if(window.reportsFilterActive !== undefined) window.reportsFilterActive = false; }catch(e){}
-      try{ const _br2 = document.getElementById('btnReports'); if(_br2){ _br2.classList.remove('btn-secondary'); _br2.classList.add('btn-outline-secondary'); _br2.textContent='Informes (Completadas)'; } }catch(e){}
+      try{ const _br2 = document.getElementById('btnReports'); if(_br2){ _br2.classList.remove('btn-secondary'); _br2.classList.add('btn-outline-secondary'); _br2.textContent='Informes (Terminadas)'; } }catch(e){}
     });
 
     // Report modal logic
@@ -571,6 +698,7 @@
         const serial = escapeHtml(r.device_serial || r.serial || '');
         const email = escapeHtml(r.customer_email || r.email || '');
         const problema = escapeHtml(r.problem||'');
+        const technician = escapeHtml(r.technician_name || r.tech_name || '');
         const details = `
           <div class="row mb-2">
             <div class="col-7"><strong>Cliente:</strong> ${cliente}</div>
@@ -578,20 +706,42 @@
           </div>
           <div class="row mb-2">
             <div class="col-7"><strong>Dispositivo:</strong> ${dispositivo}</div>
-            <div class="col-5"><strong>Número de Serie:</strong> ${serial}</div>
+            <div class="col-5"><strong>Técnico:</strong> ${technician}</div>
           </div>
           <div class="mb-2"><strong>Correo electrónico:</strong> ${email}</div>
           <div class="mb-2"><strong>Problema:</strong><div class="small text-muted">${problema}</div></div>
         `;
         document.getElementById('reportDetails').innerHTML = details;
+        // ensure labour fields start empty when opening the report (will be filled from saved report if available)
+        try{ document.getElementById('reportLabour').value = ''; document.getElementById('reportLabourNotes').value = ''; }catch(e){}
         // load items into cache for the add-repuesto modal only (do not show suggestions here)
         if(!reportItemsCache){ const itemsRes = await axios.get('/api/items.php?active=1', { headers: getAuthHeaders() }); reportItemsCache = (itemsRes.data||[]).filter(it => (it.category_name||'').toLowerCase().indexOf('repuestos')!==-1); }
         // keep suggestions hidden in the main modal; selected items appear on the right
         const itemsList = document.getElementById('reportItemsList'); if(itemsList) itemsList.innerHTML = ''; 
-        // reset selection
+        // attempt to load previously saved report (latest) for this repair
         reportSelected = [];
-        // store repair id for saving
+        try{
+          const rr = await axios.get('/api/repair_reports.php', { headers: getAuthHeaders(), params: { repair_id: r.id } });
+          if(rr && Array.isArray(rr.data) && rr.data.length){
+            const latest = rr.data[0];
+            // populate labour and notes from latest saved report only if present
+            if(latest.labour_amount !== undefined && latest.labour_amount !== null){
+              try{ document.getElementById('reportLabour').value = latest.labour_amount; }catch(e){}
+            }
+            if(latest.labour_notes !== undefined && latest.labour_notes !== null){
+              try{ document.getElementById('reportLabourNotes').value = latest.labour_notes; }catch(e){}
+            }
+            // populate lines
+            if(Array.isArray(latest.lines) && latest.lines.length){
+              latest.lines.forEach(line => {
+                reportSelected.push({ id: line.item_id, name: line.item_name || line.name || ('ID-'+line.item_id), brand_name: '', unit_price: Number(line.unit_price||0), qty: Number(line.qty||1) });
+              });
+            }
+          }
+        }catch(e){ /* ignore if not available */ }
+        // store repair id and data for saving/printing
         window.currentReportRepairId = r.id || repairId;
+        window.currentReportData = r;
         renderReportSelected();
         reportModal.show();
       }catch(e){ showToast('No se pudo abrir informe','danger'); }
@@ -667,18 +817,85 @@
 
     document.getElementById('reportSelected').addEventListener('input', (ev)=>{ const t = ev.target; if(t && t.classList && t.classList.contains('qty-input')){ const idx = Number(t.dataset.idx); const v = parseInt(t.value,10) || 1; if(reportSelected[idx]) reportSelected[idx].qty = v; updateReportTotals(); } });
     document.getElementById('reportLabour').addEventListener('input', updateReportTotals);
-    document.getElementById('reportPrint').addEventListener('click', ()=>{
+    document.getElementById('reportPrint').addEventListener('click', async ()=>{
       const ord = document.getElementById('reportOrderNumber').textContent;
       const details = document.getElementById('reportDetails').innerHTML;
-      let html = `<html><head><title>Informe ${ord}</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="p-4">`;
-      html += `<h3>Informe ${ord}</h3>${details}<hr/>`;
-      html += `<table class="table"><thead><tr><th>Repuesto</th><th>Cantidad</th><th>Precio unitario (ARS)</th><th>Subtotal (ARS)</th></tr></thead><tbody>`;
-      reportSelected.forEach(it=>{ html += `<tr><td>${escapeHtml(it.name)}</td><td>${it.qty}</td><td class="text-end">${fmtMoney(it.unit_price)}</td><td class="text-end">${fmtMoney(it.qty * it.unit_price)}</td></tr>`; });
+      const logoUrl = window.location.origin + '/img/logo.png';
+      // get client data from cached repair data
+      const data = window.currentReportData || {};
+      const clienteName = data.customer_name || data.customer || '';
+      const clientePhone = data.customer_contact_phone || data.phone || '';
+      const qrPayload = `Informe: ${ord}\nCliente: ${clienteName}${clientePhone ? ' - ' + clientePhone : ''}`;
+      let qrDataUrl = '';
+      try{
+        if(window.QRCode && window.QRCode.toDataURL){ qrDataUrl = await window.QRCode.toDataURL(qrPayload, { width: 124, margin: 1 }); }
+      }catch(e){ qrDataUrl = ''; }
+
+      // logo 20% larger and placed to the LEFT; title centered with informe below; QR on the RIGHT
+      const isBig = String(ord || '').trim().toUpperCase().indexOf('ORD-000008') !== -1;
+      const bigCss = isBig ? 'header .logo img{height:110px} header .center h2{font-size:28px} header .center .ord{font-size:18px} header .qr img{height:140px} body{font-size:16px}' : '';
+      let html = `<!doctype html><html><head><meta charset="utf-8"><title>Informe ${escapeHtml(ord)}</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"><style>@page{margin:6mm 10mm 6mm 4mm}body{font-family:Arial,Helvetica,sans-serif;color:#111}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}${bigCss}header .logo img{height:77px}header .center{flex:1;text-align:center}header .center h2{margin:0;font-size:20px}header .center .ord{font-size:14px;color:#555;margin-top:4px}header .qr img{height:100px}</style></head><body class="p-3">`;
+      html += `<header><div class="logo"><img src="${logoUrl}" alt="Logo"/></div><div class="center"><h2>Bachy Electrónica</h2><div style="font-size:12px;color:#555;margin-top:4px">25 de Mayo 1116 - Trelew - Cel: 2804 857004<br>Espana 158 - Trelew - Cel: 2804 370838</div><div class="ord">Informe ${escapeHtml(ord)}</div></div><div class="qr">${qrDataUrl?'<img src="'+qrDataUrl+'" alt="QR"/>':''}</div></header>`;
+      html += `<section>${details}<hr/></section>`;
+      html += `<table class="table table-sm"><thead><tr><th style="width:70px">Cant.</th><th>Detalles</th><th style="width:120px" class="text-end">Pre.Uni.</th><th style="width:120px" class="text-end">Subto.</th></tr></thead><tbody>`;
+      reportSelected.forEach(it=>{
+        const sub = fmtMoney(it.qty * it.unit_price);
+        html += `<tr><td>${it.qty}</td><td>${escapeHtml(it.name)}</td><td class="text-end">${fmtMoney(it.unit_price)}</td><td class="text-end">${sub}</td></tr>`;
+      });
+      const labourVal = Number(document.getElementById('reportLabour').value||0);
+      const labourNotes = (document.getElementById('reportLabourNotes').value||'').trim();
+      if(labourVal && labourVal > 0){
+        html += `<tr><td></td><td><strong>Mano de obra</strong>${labourNotes ? ' — <span class="small text-muted">'+escapeHtml(labourNotes)+'</span>' : ''}</td><td class="text-end">${fmtMoney(labourVal)}</td><td class="text-end">${fmtMoney(labourVal)}</td></tr>`;
+      }
       html += `</tbody></table>`;
-      html += `<div><strong>Mano de Obra:</strong> ${fmtMoney(Number(document.getElementById('reportLabour').value||0))} ARS</div>`;
-      html += `<div class="mt-3"><strong>Total:</strong> ${document.getElementById('reportTotal').textContent} ARS</div>`;
+      html += `<div class="mt-3" style="text-align:right"><span class="fs-5"><strong>Total:</strong> ${document.getElementById('reportTotal').textContent}</span></div>`;
+      html += `<footer style="margin-top:18px;border-top:1px solid #eee;padding-top:6px;font-size:12px;text-align:center">Garantia de reparacion: 30 dias desde la entrega.</footer>`;
       html += `</body></html>`;
-      const w = window.open('', '_blank'); w.document.write(html); w.document.close(); w.focus(); w.print();
+
+      const w = window.open('', '_blank');
+      if(!w){ showToast('Habilitá ventanas emergentes para imprimir el informe', 'warning'); return; }
+      w.document.write(html); w.document.close();
+      w.focus();
+      setTimeout(()=>{ try{ w.print(); }catch(e){} }, 600);
+    });
+    document.getElementById('reportDownload').addEventListener('click', async ()=>{
+      const ord = document.getElementById('reportOrderNumber').textContent || 'informe';
+      const html = (function(){
+        const ord = document.getElementById('reportOrderNumber').textContent;
+        const details = document.getElementById('reportDetails').innerHTML;
+        const logoUrl = window.location.origin + '/img/logo.png';
+        const data = window.currentReportData || {};
+        const clienteName = data.customer_name || data.customer || '';
+        const clientePhone = data.customer_contact_phone || data.phone || '';
+        const qrPayload = `Informe: ${ord}\nCliente: ${clienteName}${clientePhone ? ' - ' + clientePhone : ''}`;
+        let qrDataUrl = '';
+        try{ if(window.QRCode && window.QRCode.toDataURL){ qrDataUrl = window.QRCode.toDataURL(qrPayload, { width: 124, margin: 1 }); } }catch(e){ qrDataUrl = ''; }
+        const isBig = String(ord || '').trim().toUpperCase().indexOf('ORD-000008') !== -1;
+        const bigCss = isBig ? 'header .logo img{height:110px} header .center h2{font-size:28px} header .center .ord{font-size:18px} header .qr img{height:140px} body{font-size:16px}' : '';
+        let html = `<!doctype html><html><head><meta charset="utf-8"><title>Informe ${escapeHtml(ord)}</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"><style>@page{margin:6mm 10mm 6mm 4mm}body{font-family:Arial,Helvetica,sans-serif;color:#111}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}${bigCss}header .logo img{height:77px}header .center{flex:1;text-align:center}header .center h2{margin:0;font-size:20px}header .center .ord{font-size:14px;color:#555;margin-top:4px}header .qr img{height:100px}/* force tables to fit printable width */table{width:100% !important;table-layout:fixed;}th,td{overflow-wrap:break-word;word-wrap:break-word;white-space:normal;}img{max-width:100%;height:auto;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body class="p-3">`;
+        html += `<header><div class="logo"><img src="${logoUrl}" alt="Logo"/></div><div class="center"><h2>Bachy Electrónica</h2><div style="font-size:12px;color:#555;margin-top:4px">25 de Mayo 1116 - Trelew - Cel: 2804 857004<br>Espana 158 - Trelew - Cel: 2804 370838</div><div class="ord">Informe ${escapeHtml(ord)}</div></div><div class="qr">${qrDataUrl?'<img src="'+qrDataUrl+'" alt="QR"/>':''}</div></header>`;
+        html += `<section>${details}<hr/></section>`;
+        html += `<table class="table table-sm"><thead><tr><th style="width:70px">Cant.</th><th>Detalles</th><th style="width:120px" class="text-end">Pre.Uni.</th><th style="width:120px" class="text-end">Subto.</th></tr></thead><tbody>`;
+        reportSelected.forEach(it=>{ const sub = fmtMoney(it.qty * it.unit_price); html += `<tr><td>${it.qty}</td><td>${escapeHtml(it.name)}</td><td class="text-end">${fmtMoney(it.unit_price)}</td><td class="text-end">${sub}</td></tr>`; });
+        const labourVal = Number(document.getElementById('reportLabour').value||0);
+        const labourNotes = (document.getElementById('reportLabourNotes').value||'').trim();
+        if(labourVal && labourVal > 0){ html += `<tr><td></td><td><strong>Mano de obra</strong>${labourNotes ? ' — <span class="small text-muted">'+escapeHtml(labourNotes)+'</span>' : ''}</td><td class="text-end">${fmtMoney(labourVal)}</td><td class="text-end">${fmtMoney(labourVal)}</td></tr>`; }
+        html += `</tbody></table>`;
+        html += `<div class="mt-3" style="text-align:right"><span class="fs-5"><strong>Total:</strong> ${document.getElementById('reportTotal').textContent}</span></div>`;
+        html += `<footer style="margin-top:18px;border-top:1px solid #eee;padding-top:6px;font-size:12px;text-align:center">Garantia de reparacion: 30 dias desde la entrega.</footer>`;
+        html += `</body></html>`;
+        return html;
+      })();
+      // create container sized to printable width (A4 width minus 2*12mm margins)
+      // create container sized to printable width: A4 (210mm) - left(4mm) - right(10mm) = 196mm
+      const container = document.createElement('div'); container.style.width = '196mm'; container.style.maxWidth = '196mm'; container.style.boxSizing = 'border-box'; container.style.padding = '0'; container.innerHTML = html;
+      document.body.appendChild(container);
+      const opt = { margin: 4, filename: `${ord.replace(/\s+/g,'_')}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+      try{
+        await html2pdf().set(opt).from(container).save();
+      }catch(e){ showToast('Error generando PDF', 'danger'); }
+      // cleanup
+      try{ document.body.removeChild(container); }catch(e){}
     });
     document.getElementById('reportSave').addEventListener('click', async ()=>{
       try{
@@ -699,6 +916,8 @@
       const formEl = document.getElementById('repairForm'); if(formEl) formEl.reset();
       const idEl = document.getElementById('repairId'); if(idEl) idEl.value = '';
       const statusEl = document.getElementById('repairStatus'); if(statusEl) statusEl.value = 'received';
+      // allow editing client when creating a new repair
+      try{ const custSearch = document.getElementById('repairCustomerSearch'); if(custSearch) custSearch.disabled = false; const custId = document.getElementById('repairCustomerId'); if(custId) custId.disabled = false; }catch(e){}
       // set date to now
       const now = new Date();
       const local = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
@@ -708,6 +927,8 @@
       const custId = document.getElementById('repairCustomerId'); if(custId) custId.value = '';
       const dsel = document.getElementById('repairDeviceSelect'); if(dsel){ dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; dsel.disabled = true; }
       const orderSpan = document.getElementById('repairOrderNumber'); if(orderSpan) orderSpan.textContent = '';
+      // reset brand/model selects and estimate
+      try{ const bsel = document.getElementById('repairBrandSelect'); if(bsel) bsel.innerHTML = '<option value="">Seleccionar marca...</option>'; const msel = document.getElementById('repairModelSelect'); if(msel){ msel.innerHTML = '<option value="">Seleccionar modelo...</option>'; msel.disabled = true; } document.getElementById('repairEstimate').value = ''; }catch(e){}
       try{ repairModal.show(); }catch(e){ console.error('repairModal not available', e); }
     }
     const btnNewEl = document.getElementById('btnNew'); if(btnNewEl) btnNewEl.addEventListener('click', openNewRepair);
@@ -726,11 +947,11 @@
           btnReports.classList.remove('btn-outline-secondary');
           btnReports.classList.add('btn-secondary');
           btnReports.textContent = 'Mostrar Todas';
-          loadRepairs({ status: 'completada' });
+          loadRepairs({ status: 'terminado' });
         } else {
           btnReports.classList.remove('btn-secondary');
           btnReports.classList.add('btn-outline-secondary');
-          btnReports.textContent = 'Informes (Completadas)';
+          btnReports.textContent = 'Informes (Terminadas)';
           loadRepairs();
         }
       });
@@ -749,9 +970,34 @@
           document.getElementById('repairCustomerSearch').value = r.customer_name ? (r.customer_name + (r.phone ? (' — '+r.phone) : '')) : '';
           // load devices for customer and preselect
           const dsel = document.getElementById('repairDeviceSelect'); if(dsel){ dsel.innerHTML = '<option value="">Seleccionar dispositivo...</option>'; dsel.disabled = true; if(r.customer_id){ try{ const devRes = await axios.get('/api/devices.php?customer_id='+r.customer_id, { headers: getAuthHeaders() }); (devRes.data||[]).forEach(d=>{ const opt=document.createElement('option'); opt.value=d.id; opt.text=(d.brand||'')+ ' ' + (d.model||'') + (d.serial?(' — '+d.serial):''); dsel.appendChild(opt); }); dsel.disabled=false; for(let i=0;i<dsel.options.length;i++){ if(dsel.options[i].value==r.device_id || dsel.options[i].text.indexOf(r.device_model||'')!==-1){ dsel.selectedIndex=i; break; } } }catch(e){} } }
+          // try to set brand/model selects based on repair data
+          try{
+            const brandSel = document.getElementById('repairBrandSelect');
+            const modelSel = document.getElementById('repairModelSelect');
+            if(brandSel){
+              // select brand by matching text if available
+              if(r.device_brand){
+                for(let i=0;i<brandSel.options.length;i++){ if(brandSel.options[i].text === (r.device_brand||'')){ brandSel.selectedIndex = i; break; } }
+              }
+              // if a brand is selected, load models for it and select matching model
+              const bid = brandSel.value;
+              if(bid){
+                try{
+                  const modelsRes = await axios.get('/api/models.php?brand_id='+bid, { headers: getAuthHeaders() });
+                  modelSel.innerHTML = '<option value="">Seleccionar modelo...</option>';
+                  (modelsRes.data || []).forEach(m=>{ const o = document.createElement('option'); o.value = m.id; o.text = m.name; modelSel.appendChild(o); });
+                  modelSel.disabled = false;
+                  if(r.device_model){ for(let i=0;i<modelSel.options.length;i++){ if(modelSel.options[i].text === (r.device_model||'')){ modelSel.selectedIndex = i; break; } } }
+                }catch(e){ modelSel.disabled = true; }
+              }
+            }
+          }catch(e){ /* ignore */ }
           document.getElementById('repairDate').value = r.scheduled_at ? r.scheduled_at.replace(' ', 'T') : '';
-          document.getElementById('repairStatus').value = r.status || 'en reparacion';
+          // If status missing, default to 'Recibida' when opening for edit so user can modify it
+          document.getElementById('repairStatus').value = r.status || 'received';
           document.getElementById('repairProblem').value = r.problem || '';
+          // populate estimate if present
+          try{ document.getElementById('repairEstimate').value = r.estimate || ''; }catch(e){}
           // populate contact name/phone if available on repair or customer
           document.getElementById('repairContactName').value = r.contact_name || r.customer_contact_name || '';
           document.getElementById('repairContactPhone').value = r.contact_phone || r.customer_contact_phone || r.contact || '';
@@ -762,7 +1008,7 @@
           // If the repair is concluded, disable editing in the popup and show Edit Order link for admins
           try{
             const s = String(r.status || '').toLowerCase();
-            const concluded = ['done','concluido','completada'].includes(s);
+            const concluded = ['done','concluido','completada','terminado','terminada'].includes(s);
             const saveBtn = document.getElementById('saveRepair');
             if(concluded){
               document.querySelectorAll('#repairForm input, #repairForm select, #repairForm textarea').forEach(el=>el.disabled = true);
@@ -786,6 +1032,8 @@
               const link = document.getElementById('editOrderLink'); if(link) link.style.display = 'none';
             }
           }catch(e){ /* ignore UI errors */ }
+          // When opening an existing repair, prevent changing the client
+          try{ if(document.getElementById('repairId').value){ const cs = document.getElementById('repairCustomerSearch'); const cid = document.getElementById('repairCustomerId'); if(cs) cs.disabled = true; if(cid) cid.disabled = true; } }catch(e){}
         } else if(e.target.dataset.report){
           await openReport(e.target.dataset.report);
         } else if(e.target.dataset.del){
@@ -802,11 +1050,13 @@
       const id = document.getElementById('repairId').value;
       const techSel = document.getElementById('repairTechSelect');
       const deviceSel = document.getElementById('repairDeviceSelect');
+      const modelSel = document.getElementById('repairModelSelect');
       const payload = {
         technician_id: techSel && techSel.value ? techSel.value : null,
         customer_id: document.getElementById('repairCustomerId').value||null,
         device_id: deviceSel && deviceSel.value ? deviceSel.value : null,
-        device_model: (deviceSel && deviceSel.selectedIndex>0) ? deviceSel.options[deviceSel.selectedIndex].text : null,
+        device_model: (modelSel && modelSel.selectedIndex>0) ? modelSel.options[modelSel.selectedIndex].text : ((deviceSel && deviceSel.selectedIndex>0) ? deviceSel.options[deviceSel.selectedIndex].text : null),
+        estimate: document.getElementById('repairEstimate') ? document.getElementById('repairEstimate').value.trim() || null : null,
         scheduled_at: (document.getElementById('repairDate').value||'').replace('T',' '),
         status: document.getElementById('repairStatus').value,
         problem: document.getElementById('repairProblem').value.trim() || null,
@@ -828,8 +1078,10 @@
           }catch(e){ showToast('No se pudo validar el dispositivo seleccionado', 'warning'); return; }
         }
         if(id){
-          await axios.put('/api/repairs.php?id='+id, payload, { headers: getAuthHeaders() });
+          const resPut = await axios.put('/api/repairs.php?id='+id, payload, { headers: getAuthHeaders() });
           showToast('Reparación actualizada','success');
+          // If server assigned an order_number during update, show it
+          if(resPut && resPut.data && resPut.data.order_number){ const orderSpan = document.getElementById('repairOrderNumber'); if(orderSpan) orderSpan.textContent = resPut.data.order_number; }
           currentRepairReceiptData = buildRepairReceiptData({ id, order_number: document.getElementById('repairOrderNumber').textContent || '', created_at: currentRepairReceiptData && currentRepairReceiptData.createdAt ? currentRepairReceiptData.createdAt : new Date().toISOString() });
         } else {
           const res = await axios.post('/api/repairs.php', payload, { headers: getAuthHeaders() });

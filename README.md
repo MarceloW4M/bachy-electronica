@@ -321,6 +321,45 @@ Si n8n corre en Docker, puede ser necesario usar:
 - `http://host.docker.internal:3101/mcp/sse`
 - o la IP del host Linux.
 
+### Nuevas herramientas de agenda (MCP)
+
+Se añadieron dos herramientas de escritura al MCP para gestionar reparaciones desde n8n o clientes MCP:
+
+- `update_repair`: permite actualizar campos de una reparación existente (reagendar, reasignar técnico, cambiar estado, contacto, etc.).
+- `delete_repair`: elimina una reparación por `repair_id`.
+
+Para exponerlas habilitá escrituras y agrégalas a la allow-list en el `.env` del MCP, por ejemplo:
+
+```env
+MCP_ENABLE_WRITES=true
+MCP_ALLOWED_WRITE_TOOLS=create_customer,create_repair,update_repair,delete_repair
+```
+
+Ejemplo de `update_repair` (payload JSON):
+
+```json
+{
+	"repair_id": 789,
+	"scheduled_at": "2026-05-05 15:00:00",
+	"technician_id": 9,
+	"status": "scheduled"
+}
+```
+
+Ejemplo de `delete_repair`:
+
+```json
+{ "repair_id": 789 }
+```
+
+Después de modificar `.env` reiniciá el servicio MCP:
+
+```bash
+docker compose up -d --build mcp
+```
+
+En n8n podés usar el nodo `MCP Client Tool` para llamar a estas herramientas (con `Authentication: Bearer` y el token configurado en `MCP_AUTH_TOKEN`).
+
 ## Utilidades Node.js opcionales
 
 Instalar dependencias:

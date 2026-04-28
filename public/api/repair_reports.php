@@ -83,10 +83,11 @@ if ($method === 'POST') {
             }
         }
 
-        // Update the parent repair with calculated totals and mark as completed (Completada)
+        // Update the parent repair with calculated totals and mark as terminado
         try{
             $upd = $pdo->prepare('UPDATE repairs SET parts_total = ?, labour_price = ?, total_amount = ?, status = ? WHERE id = ?');
-            $upd->execute([round($subtotal,2), round($labour,2), round($total,2), 'Completada', $repair_id]);
+            // store new canonical status 'terminado'
+            $upd->execute([round($subtotal,2), round($labour,2), round($total,2), 'terminado', $repair_id]);
         }catch(Throwable $e){
             // If update fails (e.g., columns not present), ignore so report saving is not blocked.
         }
@@ -109,9 +110,11 @@ if ($method === 'GET') {
     $stmt = $pdo->prepare('SELECT * FROM repair_reports WHERE repair_id = ? ORDER BY created_at DESC');
     $stmt->execute([$repair_id]);
     $reports = $stmt->fetchAll();
-    foreach($reports as &$r){
-        $r['lines'] = $pdo->prepare('SELECT * FROM repair_report_lines WHERE report_id = ?')->execute([$r['id']]) ? [] : [];
-    }
+        foreach($reports as &$r){
+            $linesStmt = $pdo->prepare('SELECT * FROM repair_report_lines WHERE report_id = ?');
+            $linesStmt->execute([$r['id']]);
+            $r['lines'] = $linesStmt->fetchAll();
+        }
     echo json_encode($reports, JSON_UNESCAPED_UNICODE);
     exit;
 }

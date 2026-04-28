@@ -73,6 +73,25 @@ if ($method === 'GET') {
         exit;
     }
 
+    // support lookup by id_meta: ?id_meta=XYZ (for Instagram / n8n)
+    if (isset($_GET['id_meta'])) {
+        $id_meta = trim((string)$_GET['id_meta']);
+        if ($id_meta === '') {
+            echo json_encode(null, JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $stmt = $pdo->prepare('SELECT * FROM customers WHERE id_meta = ? LIMIT 1');
+        $stmt->execute([$id_meta]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            echo json_encode(null, JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if (isset($row['password_hash'])) { unset($row['password_hash']); }
+        echo json_encode($row, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $rows = $pdo->query('SELECT * FROM customers ORDER BY created_at DESC, id DESC')->fetchAll();
     // remove password_hash from output
     foreach ($rows as &$r) { if (isset($r['password_hash'])) { unset($r['password_hash']); } }
@@ -136,6 +155,8 @@ if ($method === 'POST') {
 
     // id_boot optional (from external system like n8n/telegram)
     $id_boot = isset($input['id_boot']) && $input['id_boot'] !== '' ? trim((string)$input['id_boot']) : null;
+    // id_meta optional (for Instagram / n8n)
+    $id_meta = isset($input['id_meta']) && $input['id_meta'] !== '' ? trim((string)$input['id_meta']) : null;
 
     // Accept optional password to store a password hash for the customer
     $password_hash = null;
@@ -143,7 +164,7 @@ if ($method === 'POST') {
         $password_hash = password_hash((string)$input['password'], PASSWORD_DEFAULT);
     }
 
-    $stmt = $pdo->prepare('INSERT INTO customers (name, password_hash, dni_cuit, phone, email, address, province_id, city_id, postal_code, contact_name, contact_phone, id_boot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt = $pdo->prepare('INSERT INTO customers (name, password_hash, dni_cuit, phone, email, address, province_id, city_id, postal_code, contact_name, contact_phone, id_boot, id_meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
         $input['name'],
         $password_hash,
@@ -157,6 +178,7 @@ if ($method === 'POST') {
         $input['contact_name'] ?? null,
         $input['contact_phone'] ?? null,
         $id_boot,
+        $id_meta,
     ]);
 
     echo json_encode(['id' => (int) $pdo->lastInsertId()], JSON_UNESCAPED_UNICODE);
@@ -221,6 +243,7 @@ if ($method === 'PUT') {
     if (array_key_exists('contact_name', $input)){ $fields[] = 'contact_name = ?'; $params[] = $input['contact_name'] ?? null; }
     if (array_key_exists('contact_phone', $input)){ $fields[] = 'contact_phone = ?'; $params[] = $input['contact_phone'] ?? null; }
     if (array_key_exists('id_boot', $input)){ $fields[] = 'id_boot = ?'; $params[] = $input['id_boot'] !== null ? $input['id_boot'] : null; }
+    if (array_key_exists('id_meta', $input)){ $fields[] = 'id_meta = ?'; $params[] = $input['id_meta'] !== null ? $input['id_meta'] : null; }
 
     if (empty($fields)){
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);

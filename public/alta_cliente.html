@@ -28,7 +28,10 @@
     .error{color:#b00020;font-size:13px;margin-top:6px}
     .success{color:green;font-size:14px;margin-top:6px}
     .toast{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:#111;color:#fff;padding:14px 18px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,0.25);z-index:9999;font-size:16px}
-    @media (max-width:420px){.card{padding:14px;border-radius:10px}h1{font-size:18px}}
+    @media (max-width:420px){.card{padding:14px;border-radius:10px}h1{font-size:18px}
+      /* On small screens allow the layout to scroll when keyboard opens */
+      .wrap{align-items:flex-start;padding-top:18px;padding-bottom:60px}
+    }
   </style>
 </head>
 <body>
@@ -37,6 +40,7 @@
     <div class="card" role="main">
       <div class="logo-top"><img src="/img/logo.png" alt="logo"></div>
       <h1>Alta de Cliente</h1>
+      <div id="verify-instruction" class="muted hidden">Verifique y modifique los datos si es necesario</div>
       <div class="field">
         <label for="cuit">CUIT / DNI</label>
         <input id="cuit" name="cuit" inputmode="numeric" pattern="[0-9]{8,11}" placeholder="Sólo números, 8 a 11 dígitos" autocomplete="off" />
@@ -53,6 +57,10 @@
           <label for="id_boot">Boot</label>
           <input id="id_boot" name="id_boot" readonly />
         </div>
+        <div class="field" id="meta-field" style="display:none">
+          <label for="id_meta">Meta (Instagram)</label>
+          <input id="id_meta" name="id_meta" readonly />
+        </div>
         <div class="field">
           <label for="name">Nombre completo</label>
           <input id="name" name="name" placeholder="Nombre y apellido" />
@@ -63,7 +71,7 @@
         </div>
         <div class="field">
           <label for="phone">Teléfono</label>
-          <input id="phone" name="phone" inputmode="tel" placeholder="01112345678" />
+          <input id="phone" name="phone" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="15" placeholder="01112345678" />
         </div>
         <div class="field">
           <label for="email">E-mail</label>
@@ -90,6 +98,8 @@
     const msg = document.getElementById('msg');
     const toast = document.getElementById('toast');
     const cuitHelp = document.getElementById('cuit-help');
+    const phoneInput = document.getElementById('phone');
+    const emailInput = document.getElementById('email');
 
     function cleanDigits(s){return (s||'').replace(/\D/g,'');}
     function validCUIT(s){const d=cleanDigits(s);return d.length>=8 && d.length<=11;}
@@ -105,6 +115,21 @@
       verifyBtn.style.display = '';
       cuitInput.readOnly = false;
     });
+
+    // Ensure phone contains only digits while typing
+    if (phoneInput){
+      phoneInput.addEventListener('input', e=>{
+        const v = (e.target.value||'').replace(/\D/g,'');
+        if (e.target.value !== v) e.target.value = v;
+      });
+      // scroll into view when focusing on mobile so keyboard doesn't hide it
+      phoneInput.addEventListener('focus', e=>{ setTimeout(()=>{ phoneInput.scrollIntoView({behavior:'smooth', block:'center'}); }, 350); });
+    }
+    if (emailInput){
+      emailInput.addEventListener('focus', e=>{ setTimeout(()=>{ emailInput.scrollIntoView({behavior:'smooth', block:'center'}); }, 350); });
+    }
+
+    let existingCustomer = null;
 
     async function checkCUIT(){
       const val = cuitInput.value.trim();
@@ -123,18 +148,37 @@
         if (!res.ok){ checkResult.textContent = 'Error al consultar el servidor'; return; }
         const data = await res.json();
         if (!data){
+          // not found: show empty form for creation
+          existingCustomer = null;
           resto.classList.remove('hidden');
           submitBtn.classList.remove('hidden');
           cuitInput.readOnly = true;
           verifyBtn.style.display = 'none';
-          if (bootVar){
-            const bf = document.getElementById('boot-field');
-            const bi = document.getElementById('id_boot');
-            if (bf && bi){ bf.style.display = ''; bi.value = bootVar; }
-          }
+          // hide verify instruction when not found
+          const vinst = document.getElementById('verify-instruction'); if (vinst) { vinst.classList.add('hidden'); }
+          // prefill only one: prefer metaVar over bootVar
+          if (metaVar){ const mf = document.getElementById('meta-field'); const mi = document.getElementById('id_meta'); const bf = document.getElementById('boot-field'); if (bf) bf.style.display = 'none'; if (mf && mi){ mf.style.display = ''; mi.value = metaVar; } }
+          else if (bootVar){ const bf = document.getElementById('boot-field'); const bi = document.getElementById('id_boot'); const mf = document.getElementById('meta-field'); if (mf) mf.style.display = 'none'; if (bf && bi){ bf.style.display = ''; bi.value = bootVar; } }
         } else {
+          // found: populate fields for verification/edit
+          existingCustomer = data;
+          resto.classList.remove('hidden');
+          submitBtn.classList.remove('hidden');
+          cuitInput.readOnly = true;
+          verifyBtn.style.display = 'none';
+          // populate values from DB
+          document.getElementById('name').value = data.name || '';
+          document.getElementById('address').value = data.address || '';
+          document.getElementById('phone').value = data.phone || '';
+          document.getElementById('email').value = data.email || '';
+          // show only one of id_meta or id_boot. Prefer database id_meta (or metaVar) over id_boot.
+          const bf = document.getElementById('boot-field'); const bi = document.getElementById('id_boot');
+          const mf = document.getElementById('meta-field'); const mi = document.getElementById('id_meta');
+          if (data.id_meta || metaVar){ if (bf) bf.style.display = 'none'; if (mf && mi){ mf.style.display = ''; mi.value = data.id_meta || metaVar || ''; } }
+          else if (data.id_boot || bootVar){ if (mf) mf.style.display = 'none'; if (bf && bi){ bf.style.display = ''; bi.value = data.id_boot || bootVar || ''; } }
+          // inform user and show instruction below title
           checkResult.textContent = '';
-          showToast('Este CUIT ya fue dado de alta como Cliente de Bachy Electrónica.', 3000, true);
+          const vinst = document.getElementById('verify-instruction'); if (vinst) { vinst.classList.remove('hidden'); }
         }
       }catch(err){
         checkResult.textContent = 'Error de conexión';
@@ -152,22 +196,41 @@
         phone: document.getElementById('phone').value.trim(),
         email: document.getElementById('email').value.trim(),
         id_boot: (document.getElementById('id_boot') && document.getElementById('id_boot').value) ? document.getElementById('id_boot').value : null,
+        id_meta: (document.getElementById('id_meta') && document.getElementById('id_meta').value) ? document.getElementById('id_meta').value : null,
       };
       if (!payload.name){ msg.innerHTML = '<div class="error">El nombre es obligatorio.</div>'; return; }
 
       submitBtn.disabled = true; submitBtn.textContent = 'Enviando...';
       try{
-        const res = await fetch('api/customers.php', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json;charset=utf-8'},
-          body: JSON.stringify(payload)
-        });
-        const j = await res.json();
-        if (res.ok){
-          showToast('Alta satisfactoria. Se enviará un mail de confirmación. Gracias!!!', 5000, true);
-          resto.classList.add('hidden'); submitBtn.classList.add('hidden');
+        let res, j;
+        if (existingCustomer && existingCustomer.id){
+          // update via PUT
+          res = await fetch('api/customers.php?id=' + encodeURIComponent(existingCustomer.id), {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json;charset=utf-8'},
+            body: JSON.stringify(payload)
+          });
+          j = await res.json();
+          if (res.ok){
+            showToast('Actualización satisfactoria.', 4000, true);
+            resto.classList.add('hidden'); submitBtn.classList.add('hidden');
+          } else {
+            msg.innerHTML = '<div class="error">Error: ' + (j.error||'Error al actualizar') + '</div>';
+          }
         } else {
-          msg.innerHTML = '<div class="error">Error: ' + (j.error||'Error al crear') + '</div>';
+          // create via POST
+          res = await fetch('api/customers.php', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json;charset=utf-8'},
+            body: JSON.stringify(payload)
+          });
+          j = await res.json();
+          if (res.ok){
+            showToast('Alta satisfactoria. Se enviará un mail de confirmación. Gracias!!!', 5000, true);
+            resto.classList.add('hidden'); submitBtn.classList.add('hidden');
+          } else {
+            msg.innerHTML = '<div class="error">Error: ' + (j.error||'Error al crear') + '</div>';
+          }
         }
       }catch(err){
         msg.innerHTML = '<div class="error">Error de conexión.</div>';
@@ -177,10 +240,21 @@
     cuitInput.addEventListener('keydown', e=>{ if (e.key==='Enter'){ e.preventDefault(); checkCUIT(); } });
 
     const urlParams = new URLSearchParams(window.location.search);
+    // Accept id_boot (Telegram) or id_meta (Instagram) via query string.
+    // Priority: if id_meta is present, show only Meta; otherwise if id_boot present, show only Boot.
     const bootVar = urlParams.get('id_boot') || urlParams.get('idBoot') || '';
-    if (bootVar){
+    const metaVar = urlParams.get('id_meta') || urlParams.get('idMeta') || '';
+    if (metaVar){
+      const mf = document.getElementById('meta-field');
+      const mi = document.getElementById('id_meta');
+      const bf = document.getElementById('boot-field');
+      if (bf) bf.style.display = 'none';
+      if (mf && mi){ mf.style.display = 'none'; mi.value = metaVar; }
+    } else if (bootVar){
       const bf = document.getElementById('boot-field');
       const bi = document.getElementById('id_boot');
+      const mf = document.getElementById('meta-field');
+      if (mf) mf.style.display = 'none';
       if (bf && bi){ bf.style.display = 'none'; bi.value = bootVar; }
     }
 

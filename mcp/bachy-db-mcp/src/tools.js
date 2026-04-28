@@ -536,6 +536,37 @@ const WRITE_TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'update_repair',
+    description: 'Actualiza campos de una reparación existente (reschedule, reasignar técnico, cambiar estado).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repair_id: { type: 'integer' },
+        scheduled_at: { type: 'string', description: 'Formato YYYY-MM-DD HH:MM:SS' },
+        technician_id: { type: 'integer' },
+        status: { type: 'string' },
+        contact: { type: 'string' },
+        device_id: { type: 'integer' },
+        device_model: { type: 'string' },
+        problem: { type: 'string' },
+      },
+      required: ['repair_id'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'delete_repair',
+    description: 'Elimina una reparación existente de la base de datos.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        repair_id: { type: 'integer' },
+      },
+      required: ['repair_id'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export function getToolDefinitions({ writesEnabled, allowedWriteTools = [] }) {
@@ -1224,6 +1255,45 @@ export async function callTool({ pool, writesEnabled, allowedWriteTools = [], na
       );
 
       return asTextResult({ ok: true, id: result.insertId });
+    }
+
+    case 'update_repair': {
+      ensureWriteAllowed(writeToolNames, 'update_repair');
+
+      const repairId = Number(args.repair_id);
+      if (!repairId || !(await ensureExists(pool, 'repairs', repairId))) {
+        throw new Error(`Reparación ${args.repair_id} no encontrada.`);
+      }
+
+      const fields = [];
+      const params = [];
+      if (Object.prototype.hasOwnProperty.call(args, 'scheduled_at')) { fields.push('scheduled_at = ?'); params.push(args.scheduled_at ? String(args.scheduled_at) : null); }
+      if (Object.prototype.hasOwnProperty.call(args, 'technician_id')) { fields.push('technician_id = ?'); params.push(args.technician_id ? Number(args.technician_id) : null); }
+      if (Object.prototype.hasOwnProperty.call(args, 'status')) { fields.push('status = ?'); params.push(args.status ? String(args.status) : null); }
+      if (Object.prototype.hasOwnProperty.call(args, 'contact')) { fields.push('contact = ?'); params.push(args.contact ? String(args.contact) : null); }
+      if (Object.prototype.hasOwnProperty.call(args, 'device_id')) { fields.push('device_id = ?'); params.push(args.device_id ? Number(args.device_id) : null); }
+      if (Object.prototype.hasOwnProperty.call(args, 'device_model')) { fields.push('device_model = ?'); params.push(args.device_model ? String(args.device_model) : null); }
+      if (Object.prototype.hasOwnProperty.call(args, 'problem')) { fields.push('problem = ?'); params.push(args.problem ? String(args.problem) : null); }
+
+      if (fields.length === 0) {
+        return asTextResult({ ok: true, id: repairId, note: 'No hay campos para actualizar' });
+      }
+
+      params.push(repairId);
+      await query(pool, `UPDATE repairs SET ${fields.join(', ')} WHERE id = ?`, params);
+      return asTextResult({ ok: true, id: repairId });
+    }
+
+    case 'delete_repair': {
+      ensureWriteAllowed(writeToolNames, 'delete_repair');
+
+      const repairId = Number(args.repair_id);
+      if (!repairId || !(await ensureExists(pool, 'repairs', repairId))) {
+        throw new Error(`Reparación ${args.repair_id} no encontrada.`);
+      }
+
+      await query(pool, 'DELETE FROM repairs WHERE id = ?', [repairId]);
+      return asTextResult({ ok: true, id: repairId });
     }
 
     case 'create_device': {

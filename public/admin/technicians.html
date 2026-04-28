@@ -26,7 +26,7 @@
               <div class="table-responsive">
                 <table class="table table-hover mb-0" id="techTable">
                   <thead class="table-light">
-                    <tr><th>ID</th><th>Nombre</th><th>Marca</th><th class="text-end">Acciones</th></tr>
+                    <tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th class="text-end">Acciones</th></tr>
                   </thead>
                   <tbody></tbody>
                 </table>
@@ -86,7 +86,7 @@
             const include = (typeof t.active === 'undefined') || (t.active==1);
             if(!include) return;
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${t.id}</td><td>${escapeHtml(t.name||'')}</td><td>${escapeHtml(t.brand_name||'')}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><button class="btn btn-sm btn-primary btn-action btn-edit" data-id="${t.id}">Editar</button><button class="btn btn-sm btn-danger btn-action btn-delete" data-id="${t.id}">${t.active==1?'Desactivar':'Eliminar'}</button></div></td>`;
+            tr.innerHTML = `<td>${t.id}</td><td>${escapeHtml(t.name||'')}</td><td>${escapeHtml(t.phone||'')}</td><td class="text-end"><div class="d-flex justify-content-end gap-2"><button class="btn btn-sm btn-primary btn-action btn-edit" data-id="${t.id}">Editar</button><button class="btn btn-sm btn-danger btn-action btn-delete" data-id="${t.id}">${t.active==1?'Desactivar':'Eliminar'}</button></div></td>`;
             tbody.appendChild(tr);
           });
         }catch(e){ showToast('Error cargando técnicos','danger'); }

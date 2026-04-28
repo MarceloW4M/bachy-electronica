@@ -27,8 +27,8 @@ function normalize_repair_status($status)
         return 'received';
     }
 
-    if (in_array($normalized, ['completada', 'done', 'concluido'], true)) {
-        return 'completada';
+    if (in_array($normalized, ['completada', 'done', 'concluido', 'terminado', 'terminada'], true)) {
+        return 'terminado';
     }
 
     if (in_array($normalized, ['en reparacion', 'en-reparacion', 'repairing'], true)) {
@@ -99,8 +99,8 @@ if ($method === 'GET') {
         $where[] = 'r.status = ?';
         $params[] = $status;
     } else {
-        // By default exclude completed orders (status = 'done', 'concluido' or 'completada')
-        $where[] = "(r.status IS NULL OR LOWER(r.status) NOT IN ('done','concluido','completada'))";
+        // By default exclude completed orders (status = 'done', 'concluido', 'completada' or 'terminado')
+        $where[] = "(r.status IS NULL OR LOWER(r.status) NOT IN ('done','concluido','completada','terminado'))";
     }
 
     $sql = 'SELECT r.*, c.name AS customer_name, c.contact_name AS customer_contact_name, c.contact_phone AS customer_contact_phone, c.email AS customer_email, t.name AS technician_name, d.serial AS device_serial, d.brand AS device_brand, d.model AS device_model FROM repairs r LEFT JOIN customers c ON c.id = r.customer_id LEFT JOIN technicians t ON t.id = r.technician_id LEFT JOIN devices d ON d.id = r.device_id';
@@ -125,7 +125,7 @@ if ($method === 'POST') {
 
     $order_date = isset($input['order_date']) && $input['order_date'] ? $input['order_date'] : date('Y-m-d H:i:s');
 
-    $stmt = $pdo->prepare('INSERT INTO repairs (customer_id, device_model, problem, status, technician_id, scheduled_at, contact, device_id, order_number, order_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $stmt = $pdo->prepare('INSERT INTO repairs (customer_id, device_model, problem, status, technician_id, scheduled_at, contact, device_id, order_number, order_date, estimate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
         $input['customer_id'] ?? null,
         $input['device_model'] ?? null,
@@ -137,6 +137,7 @@ if ($method === 'POST') {
         $input['device_id'] ?? null,
         $order_number,
         $order_date,
+        isset($input['estimate']) ? $input['estimate'] : null,
     ]);
     echo json_encode(['id' => (int) $pdo->lastInsertId(), 'order_number' => $order_number, 'order_date' => $order_date], JSON_UNESCAPED_UNICODE);
     exit;
@@ -150,31 +151,66 @@ if ($method === 'PUT') {
     }
 
     // Prevent editing if order is completed (Completada / done)
-    try{
+    try {
         $chk = $pdo->prepare('SELECT status FROM repairs WHERE id = ?');
         $chk->execute([$id]);
         $cur = $chk->fetch();
-        if($cur && isset($cur['status']) && in_array(strtolower($cur['status']), ['done','concluido','completada'])){
+        if ($cur && isset($cur['status']) && in_array(strtolower($cur['status']), ['done', 'concluido', 'completada', 'terminado'])) {
             http_response_code(403);
             echo json_encode(['error' => 'No se puede editar una orden concluida'], JSON_UNESCAPED_UNICODE);
             exit;
         }
-    }catch(Throwable $e){ /* ignore and continue */ }
+    } catch (Throwable $e) { /* ignore and continue */ }
 
-    $stmt = $pdo->prepare('UPDATE repairs SET customer_id = ?, device_id = ?, device_model = ?, problem = ?, status = ?, technician_id = ?, scheduled_at = ?, contact = ? WHERE id = ?');
-    $stmt->execute([
-        $input['customer_id'] ?? null,
-        $input['device_id'] ?? null,
-        $input['device_model'] ?? null,
-        $input['problem'] ?? null,
-        normalize_repair_status($input['status'] ?? 'en reparacion'),
-        $input['technician_id'] ?? null,
-        $input['scheduled_at'] ?? null,
-        $input['contact'] ?? null,
-        $id,
-    ]);
-    echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
-    exit;
+    // If the repair has no order_number yet, generate one (so edited repairs get an order)
+    $stmtChk = $pdo->prepare('SELECT order_number FROM repairs WHERE id = ? LIMIT 1');
+    $stmtChk->execute([$id]);
+    $curRow = $stmtChk->fetch();
+    $assignedOrderNumber = null;
+    if (!$curRow || empty($curRow['order_number'])) {
+        try {
+            $r = $pdo->query("SELECT COALESCE(MAX(CAST(SUBSTRING(order_number, 5) AS UNSIGNED)), 0) AS maxn FROM repairs WHERE order_number LIKE 'ORD-%'")->fetch();
+            $next = ((int)($r['maxn'] ?? 0)) + 1;
+            $assignedOrderNumber = sprintf('ORD-%06d', $next);
+            $assignedOrderDate = date('Y-m-d H:i:s');
+        } catch (Exception $e) { $assignedOrderNumber = null; }
+    }
+
+    if ($assignedOrderNumber) {
+        $stmt = $pdo->prepare('UPDATE repairs SET customer_id = ?, device_id = ?, device_model = ?, problem = ?, status = ?, technician_id = ?, scheduled_at = ?, contact = ?, order_number = ?, order_date = ?, estimate = ? WHERE id = ?');
+        $stmt->execute([
+            $input['customer_id'] ?? null,
+            $input['device_id'] ?? null,
+            $input['device_model'] ?? null,
+            $input['problem'] ?? null,
+            normalize_repair_status($input['status'] ?? 'en reparacion'),
+            $input['technician_id'] ?? null,
+            $input['scheduled_at'] ?? null,
+            $input['contact'] ?? null,
+            $assignedOrderNumber,
+            $assignedOrderDate,
+            isset($input['estimate']) ? $input['estimate'] : null,
+            $id,
+        ]);
+        echo json_encode(['ok' => true, 'order_number' => $assignedOrderNumber, 'order_date' => $assignedOrderDate], JSON_UNESCAPED_UNICODE);
+        exit;
+    } else {
+        $stmt = $pdo->prepare('UPDATE repairs SET customer_id = ?, device_id = ?, device_model = ?, problem = ?, status = ?, technician_id = ?, scheduled_at = ?, contact = ?, estimate = ? WHERE id = ?');
+        $stmt->execute([
+            $input['customer_id'] ?? null,
+            $input['device_id'] ?? null,
+            $input['device_model'] ?? null,
+            $input['problem'] ?? null,
+            normalize_repair_status($input['status'] ?? 'en reparacion'),
+            $input['technician_id'] ?? null,
+            $input['scheduled_at'] ?? null,
+            $input['contact'] ?? null,
+            isset($input['estimate']) ? $input['estimate'] : null,
+            $id,
+        ]);
+        echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }
 
 if ($method === 'DELETE') {

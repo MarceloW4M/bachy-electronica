@@ -1311,7 +1311,7 @@
 
         // reset form for next entry
         resetForm({ preserveReceipt: true });
-        showStatus(isUpdate ? 'Actualización completada. Podés consultar otro cliente.' : 'Alta completada. Podés consultar el siguiente cliente.', 'success');
+        showStatus(isUpdate ? 'Actualización terminada. Podés consultar otro cliente.' : 'Alta terminada. Podés consultar el siguiente cliente.', 'success');
       } catch (error) {
         showStatus(error.message || 'Error guardando cliente.', 'error');
         showToast(error.message || 'Error guardando cliente.', 'danger');
