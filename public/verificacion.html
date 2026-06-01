@@ -182,6 +182,9 @@
     btnDelete.addEventListener('click', deleteCustomer);
     document.getElementById('province_id').addEventListener('change', e=>{ loadCities(e.target.value); });
 
+    // allow only digits in lookup input
+    lookupInput.addEventListener('input', (e)=>{ const v = e.target.value.replace(/\D+/g,''); if (v !== e.target.value) e.target.value = v; });
+
     (async ()=>{ await loadProvinces(); setFormVisible(false); })();
   </script>
 </body>
