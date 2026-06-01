@@ -32,6 +32,12 @@
     .status{font-size:13px;margin-top:8px}
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;padding:10px 14px;border-radius:10px;color:#fff;display:none}
     .toast.visible{display:block}
+    /* confirm modal */
+    .confirm-overlay{position:fixed;inset:0;background:rgba(6,12,24,0.5);display:none;align-items:center;justify-content:center;z-index:9999}
+    .confirm-overlay.visible{display:flex}
+    .confirm-card{background:var(--card);padding:20px;border-radius:12px;text-align:center;max-width:360px;box-shadow:0 10px 30px rgba(10,20,40,0.12)}
+    .confirm-card .title{font-size:18px;color:var(--text);margin-bottom:8px}
+    .confirm-card .name{font-size:16px;color:var(--accent);font-weight:700}
     @media(max-width:420px){.wrap{padding:10px}.card{padding:12px}} 
   </style>
 </head>
@@ -101,6 +107,13 @@
 
   <div id="toast" class="toast"></div>
 
+  <div id="confirmOverlay" class="confirm-overlay" role="dialog" aria-modal="true">
+    <div class="confirm-card">
+      <div class="title">Gracias por validar tus datos.</div>
+      <div id="confirmName" class="name"></div>
+    </div>
+  </div>
+
   <script>
     const apiBase = '/api/customers.php';
     const provincesApi = '/api/provinces.php';
@@ -162,11 +175,38 @@
       if(!currentCustomer || !currentCustomer.id){ showToast('Primero cargá un cliente', 'error'); return; }
       const payload = {};
       fields.forEach(k=>{ const el=document.getElementById(k); if(!el) return; payload[k]=el.value.trim(); });
+      // mark as validated in the customers list
+      payload.validar = 1;
       formStatus.textContent='Guardando...';
       try{
         const resp = await fetch(apiBase+'?id='+encodeURIComponent(currentCustomer.id), { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-        const js = await resp.json(); if(resp.ok){ showToast('Guardado'); formStatus.textContent='Guardado'; } else { showToast(js.error||'Error', 'error'); formStatus.textContent=js.error||'Error'; }
+        const js = await resp.json();
+        if(resp.ok){
+          // actualizar cliente actual con los valores enviados
+          Object.assign(currentCustomer, payload);
+          formStatus.textContent='Guardado';
+          // mostrar modal de confirmación con el nombre
+          showConfirmModal(payload.name || currentCustomer.name || '');
+        } else {
+          showToast(js.error||'Error', 'error'); formStatus.textContent=js.error||'Error';
+        }
       }catch(e){ console.error(e); showToast('Error al guardar', 'error'); formStatus.textContent='Error'; }
+    }
+
+    function showConfirmModal(name){
+      const overlay = document.getElementById('confirmOverlay');
+      const nameEl = document.getElementById('confirmName');
+      nameEl.textContent = name || '';
+      overlay.classList.add('visible');
+      // after 3 seconds attempt to close window
+      setTimeout(()=>{
+        try{
+          // try best-effort close; some browsers block closing tabs not opened by script
+          window.open('','_self'); window.close();
+        }catch(_){ /* ignore */ }
+        // fallback: navigate away
+        try{ location.href = 'about:blank'; }catch(_){ /* ignore */ }
+      }, 3000);
     }
 
 

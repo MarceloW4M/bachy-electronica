@@ -9,6 +9,30 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $id = isset($_GET['id']) ? (int) $_GET['id'] : null;
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
+function normalize_phone_value(?string $phone): string {
+    return preg_replace('/\D+/', '', (string) $phone);
+}
+
+function get_customer_status_alias(PDO $pdo): ?string {
+    static $statusColumn = false;
+
+    if ($statusColumn !== false) {
+        return $statusColumn;
+    }
+
+    foreach (['valido', 'validar', 'active'] as $column) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = ?");
+        $stmt->execute([$column]);
+        if ((int) $stmt->fetchColumn() > 0) {
+            $statusColumn = $column;
+            return $statusColumn;
+        }
+    }
+
+    $statusColumn = null;
+    return $statusColumn;
+}
+
 if ($method === 'GET') {
     if ($id) {
         $stmt = $pdo->prepare('SELECT * FROM customers WHERE id = ?');
@@ -27,10 +51,41 @@ if ($method === 'GET') {
     if (isset($_GET['q'])) {
         $q = trim((string)$_GET['q']);
         $like = '%' . str_replace('%','\\%',$q) . '%';
-        $stmt = $pdo->prepare('SELECT id, name, phone FROM customers WHERE name LIKE ? OR phone LIKE ? ORDER BY name LIMIT 50');
+        $selectColumns = 'id, name, phone, dni_cuit';
+        $statusColumn = get_customer_status_alias($pdo);
+        if ($statusColumn !== null) {
+            $selectColumns .= ", {$statusColumn} AS valido";
+        }
+        $stmt = $pdo->prepare("SELECT {$selectColumns} FROM customers WHERE name LIKE ? OR phone LIKE ? ORDER BY name LIMIT 50");
         $stmt->execute([$like, $like]);
         $rows = $stmt->fetchAll();
         echo json_encode($rows, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if (isset($_GET['phone'])) {
+        $phone = trim((string) $_GET['phone']);
+        $phoneNormalized = normalize_phone_value($phone);
+        if ($phoneNormalized === '') {
+            echo json_encode(null, JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $selectColumns = 'id, name, phone, dni_cuit';
+        $statusColumn = get_customer_status_alias($pdo);
+        if ($statusColumn !== null) {
+            $selectColumns .= ", {$statusColumn} AS valido";
+        }
+
+        $stmt = $pdo->prepare("SELECT {$selectColumns} FROM customers WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '+', ''), '-', ''), '(', ''), ')', '') = ? LIMIT 1");
+        $stmt->execute([$phoneNormalized]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            echo json_encode(null, JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        echo json_encode($row, JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -230,6 +285,7 @@ if ($method === 'PUT') {
     }
 
     // allow partial updates similar to suppliers API
+    $statusColumn = get_customer_status_alias($pdo);
     $fields = [];
     $params = [];
     if (isset($input['name'])){ $fields[] = 'name = ?'; $params[] = $input['name']; }
@@ -244,6 +300,11 @@ if ($method === 'PUT') {
     if (array_key_exists('contact_phone', $input)){ $fields[] = 'contact_phone = ?'; $params[] = $input['contact_phone'] ?? null; }
     if (array_key_exists('id_boot', $input)){ $fields[] = 'id_boot = ?'; $params[] = $input['id_boot'] !== null ? $input['id_boot'] : null; }
     if (array_key_exists('id_meta', $input)){ $fields[] = 'id_meta = ?'; $params[] = $input['id_meta'] !== null ? $input['id_meta'] : null; }
+    // support setting the customer status column (valido/validar/active) via input 'validar'
+    if (array_key_exists('validar', $input) && $statusColumn !== null) {
+        $fields[] = "{$statusColumn} = ?";
+        $params[] = $input['validar'] !== null ? ((int)$input['validar']) : null;
+    }
 
     if (empty($fields)){
         echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
