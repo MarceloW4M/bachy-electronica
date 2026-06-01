@@ -10,7 +10,9 @@
     html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#f8fbff, var(--bg));color:var(--text)}
     .wrap{max-width:520px;margin:0 auto;padding:16px}
     .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(10,20,40,0.08)}
-    h1{font-size:20px;margin:0 0 8px}
+    .hero{ text-align:center; margin:0 0 10px }
+    .hero .greet{ font-size:34px; margin:0; font-weight:400 }
+    .hero .subtitle{ font-size:18px; margin:6px 0 0; color:var(--muted); font-weight:400 }
     p.lead{margin:0 0 12px;color:var(--muted);font-size:13px}
     .row{display:flex;gap:8px}
     input,select,button,textarea{font:inherit}
@@ -33,7 +35,10 @@
 <body>
   <main class="wrap">
     <section class="card" aria-label="Verificación cliente móvil">
-      <h1>Hola! vamos a verificar tus datos !!!</h1>
+      <div class="hero">
+        <div class="greet">Hola</div>
+        <div class="subtitle">Vamos a verificar tus datos !!</div>
+      </div>
       <p class="lead">Buscá por DNI o teléfono. Podés corregir datos y guardar los cambios.</p>
 
       <div class="lookup">
