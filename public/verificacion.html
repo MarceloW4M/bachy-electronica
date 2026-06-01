@@ -184,6 +184,8 @@
 
     // allow only digits in lookup input
     lookupInput.addEventListener('input', (e)=>{ const v = e.target.value.replace(/\D+/g,''); if (v !== e.target.value) e.target.value = v; });
+    // prevent paste into lookup input
+    lookupInput.addEventListener('paste', (e)=>{ e.preventDefault(); showToast('Pegar no permitido en este campo', 'error'); });
 
     (async ()=>{ await loadProvinces(); setFormVisible(false); })();
   </script>
