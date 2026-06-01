@@ -184,8 +184,14 @@
 
     // allow only digits in lookup input
     lookupInput.addEventListener('input', (e)=>{ const v = e.target.value.replace(/\D+/g,''); if (v !== e.target.value) e.target.value = v; });
-    // prevent paste into lookup input
-    lookupInput.addEventListener('paste', (e)=>{ e.preventDefault(); showToast('Pegar no permitido en este campo', 'error'); });
+    // allow paste only if clipboard contains only digits
+    lookupInput.addEventListener('paste', (e)=>{
+      const paste = (e.clipboardData || window.clipboardData).getData('text') || '';
+      if (!/^\d+$/.test(paste)) {
+        e.preventDefault();
+        showToast('Solo se permite pegar números', 'error');
+      }
+    });
 
     (async ()=>{ await loadProvinces(); setFormVisible(false); })();
   </script>
