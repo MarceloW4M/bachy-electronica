@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Verificación de Cliente (móvil)</title>
+  <style>
+    :root{--bg:#f6f8fb;--card:#fff;--accent:#0b84ff;--text:#0f172a;--muted:#55606a;--radius:14px}
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#f8fbff, var(--bg));color:var(--text)}
+    .wrap{max-width:520px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(10,20,40,0.08)}
+    h1{font-size:20px;margin:0 0 8px}
+    p.lead{margin:0 0 12px;color:var(--muted);font-size:13px}
+    .row{display:flex;gap:8px}
+    input,select,button,textarea{font:inherit}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid #dde6f2;border-radius:10px}
+    .compact{padding:8px}
+    .lookup{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
+    .small{font-size:13px;color:var(--muted)}
+    .actions{display:flex;gap:8px;margin-top:10px}
+    .btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-secondary{background:#eef3fb;color:var(--text)}
+    .field{margin-bottom:8px}
+    label{display:block;font-size:12px;margin-bottom:6px;color:var(--muted);font-weight:700}
+    .status{font-size:13px;margin-top:8px}
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;padding:10px 14px;border-radius:10px;color:#fff;display:none}
+    .toast.visible{display:block}
+    @media(max-width:420px){.wrap{padding:10px}.card{padding:12px}} 
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card" aria-label="Verificación cliente móvil">
+      <h1>Verificar / Actualizar Cliente</h1>
+      <p class="lead">Buscá por DNI o teléfono. Podés corregir datos y guardar los cambios.</p>
+
+      <div class="lookup">
+        <input id="lookup_input" inputmode="numeric" placeholder="DNI o teléfono" aria-label="DNI o teléfono">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button id="btnLookupDni" class="btn btn-primary">Buscar</button>
+          <button id="btnClear" class="btn btn-secondary" style="margin-top:4px">Limpiar</button>
+        </div>
+      </div>
+
+      <form id="verifyForm" class="hidden">
+        <div class="field">
+          <label for="name">Nombre</label>
+          <input id="name" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="dni_cuit">DNI / CUIT</label>
+          <input id="dni_cuit" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="phone">Teléfono</label>
+          <input id="phone" inputmode="tel">
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email">
+        </div>
+        <div class="field">
+          <label for="address">Dirección</label>
+          <input id="address">
+        </div>
+        <div class="row">
+          <div style="flex:1" class="field">
+            <label for="province_id">Provincia</label>
+            <select id="province_id"><option value="">Cargando...</option></select>
+          </div>
+          <div style="width:140px" class="field">
+            <label for="city_id">Ciudad</label>
+            <select id="city_id"><option value="">-</option></select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="contact_name">Contacto adicional</label>
+          <input id="contact_name" placeholder="Nombre (opcional)">
+        </div>
+        <div class="field">
+          <label for="contact_phone">Teléfono contacto</label>
+          <input id="contact_phone" inputmode="tel" placeholder="(opcional)">
+        </div>
+
+        <div class="actions">
+          <button id="btnSave" class="btn btn-primary" type="button">Guardar cambios</button>
+          <button id="btnDelete" class="btn btn-secondary" type="button">Eliminar (opcional)</button>
+        </div>
+        <div id="formStatus" class="status small"></div>
+      </form>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const apiBase = '/api/customers.php';
+    const provincesApi = '/api/provinces.php';
+    const citiesApi = '/api/cities.php';
+    const lookupInput = document.getElementById('lookup_input');
+    const btnLookupDni = document.getElementById('btnLookupDni');
+    const btnClear = document.getElementById('btnClear');
+    const verifyForm = document.getElementById('verifyForm');
+    const btnSave = document.getElementById('btnSave');
+    const btnDelete = document.getElementById('btnDelete');
+    const toast = document.getElementById('toast');
+    const formStatus = document.getElementById('formStatus');
+
+    const fields = ['name','dni_cuit','phone','email','address','province_id','city_id','contact_name','contact_phone'];
+    let currentCustomer = null;
+    let provinces = [];
+
+    function showToast(msg, kind='success'){
+      toast.textContent = msg; toast.style.background = kind==='error'?'#b42318':'#16703a'; toast.className='toast visible';
+      setTimeout(()=>{toast.className='toast';},3500);
+    }
+
+    function setFormVisible(visible){
+      verifyForm.style.display = visible ? 'block' : 'none';
+    }
+
+    async function loadProvinces(){
+      try{const r=await fetch(provincesApi); provinces=await r.json(); const sel=document.getElementById('province_id'); sel.innerHTML='<option value="">-- Seleccionar --</option>'; provinces.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name;sel.appendChild(o)}); }catch(e){console.error(e)}
+    }
+
+    async function loadCities(provinceId, selected){
+      const sel=document.getElementById('city_id'); sel.innerHTML='<option value="">Cargando...</option>'; if(!provinceId){ sel.innerHTML='<option value="">-</option>'; return; }
+      try{const r=await fetch(citiesApi+'?province_id='+encodeURIComponent(provinceId)); const rows=await r.json(); sel.innerHTML='<option value="">-- Seleccionar --</option>'; rows.forEach(c=>{const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; sel.appendChild(o)}); if(selected) sel.value=selected; }catch(e){console.error(e); sel.innerHTML='<option value="">-</option>'}
+    }
+
+    function populateForm(data){
+      currentCustomer = data; setFormVisible(true); formStatus.textContent='Cliente cargado (ID: '+(data.id||'')+')';
+      fields.forEach(k=>{ const el=document.getElementById(k); if(!el) return; el.value = data[k]===null||data[k]===undefined?'':data[k]; });
+      if(data.province_id){ document.getElementById('province_id').value=data.province_id; loadCities(data.province_id, data.city_id); } else { document.getElementById('city_id').innerHTML='<option value="">-</option>'}
+    }
+
+    async function lookup(){
+      const v = lookupInput.value.trim(); if(!v){ showToast('Ingresá DNI o teléfono', 'error'); return; }
+      const digits = v.replace(/\D/g,'');
+      formStatus.textContent='Buscando...';
+      try{
+        let res=null;
+        if(digits.length>=7 && digits.length<=11){
+          const r = await fetch(apiBase+'?dni='+encodeURIComponent(digits)); res = await r.json();
+        }
+        if(!res){
+          const r2 = await fetch(apiBase+'?phone='+encodeURIComponent(v)); res = await r2.json();
+        }
+        if(!res){ setFormVisible(false); formStatus.textContent='No se encontró cliente.'; showToast('Cliente no encontrado', 'error'); currentCustomer=null; return; }
+        populateForm(res);
+      }catch(e){ console.error(e); showToast('Error de red', 'error'); }
+    }
+
+    async function saveChanges(){
+      if(!currentCustomer || !currentCustomer.id){ showToast('Primero cargá un cliente', 'error'); return; }
+      const payload = {};
+      fields.forEach(k=>{ const el=document.getElementById(k); if(!el) return; payload[k]=el.value.trim(); });
+      formStatus.textContent='Guardando...';
+      try{
+        const resp = await fetch(apiBase+'?id='+encodeURIComponent(currentCustomer.id), { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+        const js = await resp.json(); if(resp.ok){ showToast('Guardado'); formStatus.textContent='Guardado'; } else { showToast(js.error||'Error', 'error'); formStatus.textContent=js.error||'Error'; }
+      }catch(e){ console.error(e); showToast('Error al guardar', 'error'); formStatus.textContent='Error'; }
+    }
+
+    async function deleteCustomer(){
+      if(!currentCustomer || !currentCustomer.id) return; if(!confirm('Eliminar cliente ID '+currentCustomer.id+'? Esta acción es irreversible.')) return;
+      try{ const r=await fetch(apiBase+'?id='+encodeURIComponent(currentCustomer.id), { method:'DELETE' }); if(r.ok){ showToast('Cliente eliminado'); setFormVisible(false); currentCustomer=null; formStatus.textContent='El cliente fue eliminado.' } else { const j=await r.json(); showToast(j.error||'Error', 'error') } }catch(e){ showToast('Error al eliminar','error') }
+    }
+
+    btnLookupDni.addEventListener('click', lookup);
+    btnClear.addEventListener('click', ()=>{ lookupInput.value=''; setFormVisible(false); currentCustomer=null; formStatus.textContent=''; });
+    btnSave.addEventListener('click', saveChanges);
+    btnDelete.addEventListener('click', deleteCustomer);
+    document.getElementById('province_id').addEventListener('change', e=>{ loadCities(e.target.value); });
+
+    (async ()=>{ await loadProvinces(); setFormVisible(false); })();
+  </script>
+</body>
+</html>
