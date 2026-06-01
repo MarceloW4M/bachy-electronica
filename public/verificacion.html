@@ -19,6 +19,9 @@
     input,select,textarea{width:100%;padding:10px 12px;border:1px solid #dde6f2;border-radius:10px}
     .compact{padding:8px}
     .lookup{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
+    .lookup.lookup-inline{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    .lookup.lookup-inline input{flex:1}
+    .btn.compact{padding:8px 10px;font-size:14px}
     .small{font-size:13px;color:var(--muted)}
     .actions{display:flex;gap:8px;margin-top:10px}
     .btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
@@ -41,12 +44,10 @@
       </div>
       <p class="lead">Buscá por DNI o teléfono. Podés corregir datos y guardar los cambios.</p>
 
-      <div class="lookup">
-        <input id="lookup_input" inputmode="numeric" placeholder="DNI o teléfono" aria-label="DNI o teléfono">
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <button id="btnLookupDni" class="btn btn-primary">Buscar</button>
-          <button id="btnClear" class="btn btn-secondary" style="margin-top:4px">Limpiar</button>
-        </div>
+      <div class="lookup lookup-inline">
+        <input id="lookup_input" inputmode="numeric" maxlength="11" placeholder="DNI o teléfono" aria-label="DNI o teléfono">
+        <button id="btnLookupDni" class="btn btn-primary compact">Buscar</button>
+        <button id="btnClear" class="btn btn-secondary compact">Limpiar</button>
       </div>
 
       <form id="verifyForm" class="hidden">
