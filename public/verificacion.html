@@ -23,7 +23,7 @@
     .lookup.lookup-inline input{flex:1}
     .btn.compact{padding:8px 10px;font-size:14px}
     .small{font-size:13px;color:var(--muted)}
-    .actions{display:flex;gap:8px;margin-top:10px}
+    .actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
     .btn{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
     .btn-primary{background:var(--accent);color:#fff}
     .btn-secondary{background:#eef3fb;color:var(--text)}
@@ -92,8 +92,7 @@
         </div>
 
         <div class="actions">
-          <button id="btnSave" class="btn btn-primary" type="button">Guardar cambios</button>
-          <button id="btnDelete" class="btn btn-secondary" type="button">Eliminar (opcional)</button>
+          <button id="btnSave" class="btn btn-primary" type="button">Guardar</button>
         </div>
         <div id="formStatus" class="status small"></div>
       </form>
@@ -111,7 +110,6 @@
     const btnClear = document.getElementById('btnClear');
     const verifyForm = document.getElementById('verifyForm');
     const btnSave = document.getElementById('btnSave');
-    const btnDelete = document.getElementById('btnDelete');
     const toast = document.getElementById('toast');
     const formStatus = document.getElementById('formStatus');
 
@@ -138,7 +136,7 @@
     }
 
     function populateForm(data){
-      currentCustomer = data; setFormVisible(true); formStatus.textContent='Cliente cargado (ID: '+(data.id||'')+')';
+      currentCustomer = data; setFormVisible(true); formStatus.textContent='';
       fields.forEach(k=>{ const el=document.getElementById(k); if(!el) return; el.value = data[k]===null||data[k]===undefined?'':data[k]; });
       if(data.province_id){ document.getElementById('province_id').value=data.province_id; loadCities(data.province_id, data.city_id); } else { document.getElementById('city_id').innerHTML='<option value="">-</option>'}
     }
@@ -171,15 +169,10 @@
       }catch(e){ console.error(e); showToast('Error al guardar', 'error'); formStatus.textContent='Error'; }
     }
 
-    async function deleteCustomer(){
-      if(!currentCustomer || !currentCustomer.id) return; if(!confirm('Eliminar cliente ID '+currentCustomer.id+'? Esta acción es irreversible.')) return;
-      try{ const r=await fetch(apiBase+'?id='+encodeURIComponent(currentCustomer.id), { method:'DELETE' }); if(r.ok){ showToast('Cliente eliminado'); setFormVisible(false); currentCustomer=null; formStatus.textContent='El cliente fue eliminado.' } else { const j=await r.json(); showToast(j.error||'Error', 'error') } }catch(e){ showToast('Error al eliminar','error') }
-    }
 
     btnLookupDni.addEventListener('click', lookup);
     btnClear.addEventListener('click', ()=>{ lookupInput.value=''; setFormVisible(false); currentCustomer=null; formStatus.textContent=''; });
     btnSave.addEventListener('click', saveChanges);
-    btnDelete.addEventListener('click', deleteCustomer);
     document.getElementById('province_id').addEventListener('change', e=>{ loadCities(e.target.value); });
 
     // allow only digits in lookup input
